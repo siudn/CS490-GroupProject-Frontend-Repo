@@ -1,225 +1,157 @@
 import React, { useState } from "react";
-import { CheckCircle, XCircle, Clock, FileText, Phone } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Alert, AlertDescription } from "../ui/alert";
+import { CheckCircle2, XCircle, AlertCircle, Search } from "lucide-react";
 
 export default function SalonVerification() {
-  const [pendingSalons, setPendingSalons] = useState([
+  const [salons, setSalons] = useState([
     {
-      id: "1",
-      name: "Luxe Hair Studio",
-      address: "456 Oak St, New York, NY 10002",
-      phone: "(555) 234-5678",
-      description: "Premium hair salon offering cutting-edge styles",
-      document: "#",
-      image: "https://images.unsplash.com/photo-1600948836101-f9ffda59d250?w=400",
+      id: 1,
+      name: "Glam Studio",
+      owner: "Sarah Johnson",
+      city: "New York, NY",
+      license: "License_GlamStudio.pdf",
       status: "pending",
     },
     {
-      id: "2",
-      name: "Urban Cuts",
-      address: "789 Elm St, Brooklyn, NY 11201",
-      phone: "(555) 345-6789",
-      description: "Modern barbershop for the urban professional",
-      document: "#",
-      image: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400",
+      id: 2,
+      name: "Elite Cuts",
+      owner: "Mike Chen",
+      city: "Chicago, IL",
+      license: "License_EliteCuts.pdf",
       status: "pending",
+    },
+    {
+      id: 3,
+      name: "Style Hub",
+      owner: "Emma Davis",
+      city: "Dallas, TX",
+      license: "License_StyleHub.pdf",
+      status: "approved",
     },
   ]);
 
-  const [approvedSalons, setApprovedSalons] = useState([]);
-  const [rejectedSalons, setRejectedSalons] = useState([]);
-  const [selectedSalon, setSelectedSalon] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [view, setView] = useState("pending");
-
-  const handleApprove = (salon) => {
-    setPendingSalons(pendingSalons.filter((s) => s.id !== salon.id));
-    setApprovedSalons([...approvedSalons, { ...salon, status: "approved" }]);
+  const handleStatusChange = (id, newStatus) => {
+    setSalons((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status: newStatus } : s))
+    );
   };
-
-  const handleReject = (salon) => {
-    if (!rejectionReason) return;
-    setPendingSalons(pendingSalons.filter((s) => s.id !== salon.id));
-    setRejectedSalons([
-      ...rejectedSalons,
-      { ...salon, status: "rejected", rejectionReason },
-    ]);
-    setRejectionReason("");
-  };
-
-  const SalonCard = ({ salon, showActions }) => (
-    <div className="bg-white border rounded-xl p-6 shadow-sm space-y-3">
-      <div className="flex gap-4">
-        <img
-          src={salon.image}
-          alt={salon.name}
-          className="w-28 h-28 object-cover rounded-lg"
-        />
-        <div className="flex-1">
-          <div className="flex justify-between items-start">
-            <h3 className="font-semibold text-lg">{salon.name}</h3>
-            {salon.status === "pending" && (
-              <span className="text-gray-600 text-sm flex items-center gap-1">
-                <Clock size={14} /> Pending
-              </span>
-            )}
-            {salon.status === "approved" && (
-              <span className="text-green-600 text-sm flex items-center gap-1">
-                <CheckCircle size={14} /> Approved
-              </span>
-            )}
-            {salon.status === "rejected" && (
-              <span className="text-red-600 text-sm flex items-center gap-1">
-                <XCircle size={14} /> Rejected
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-gray-600">{salon.address}</p>
-          <p className="text-sm text-gray-600 flex items-center gap-1">
-            <Phone size={14} /> {salon.phone}
-          </p>
-        </div>
-      </div>
-
-      <p className="text-sm text-gray-700">{salon.description}</p>
-
-      <div className="flex items-center gap-2 text-sm text-blue-600 underline cursor-pointer">
-        <FileText size={14} />
-        <a href={salon.document} target="_blank" rel="noreferrer">
-          View Document
-        </a>
-      </div>
-
-      {salon.status === "rejected" && salon.rejectionReason && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-          <strong>Reason:</strong> {salon.rejectionReason}
-        </div>
-      )}
-
-      {showActions && (
-        <div className="flex gap-2 pt-2">
-          <button
-            onClick={() => handleApprove(salon)}
-            className="flex-1 bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
-          >
-            Approve
-          </button>
-          <button
-            onClick={() => setSelectedSalon(salon)}
-            className="flex-1 bg-red-600 text-white py-2 rounded-md hover:bg-red-700"
-          >
-            Reject
-          </button>
-        </div>
-      )}
-    </div>
-  );
-
-  const salonsToShow =
-    view === "pending"
-      ? pendingSalons
-      : view === "approved"
-      ? approvedSalons
-      : rejectedSalons;
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
-      <div className="max-w-6xl mx-auto p-8 bg-white rounded-2xl shadow">
-        <h2 className="text-2xl font-semibold mb-6 text-center">
-          Salon Verification Center
-        </h2>
-        <p className="text-sm text-gray-600 text-center mb-8">
-          Review and approve salon applications to ensure quality standards.
-        </p>
-
-        <div className="flex justify-center gap-3 mb-8">
-          <button
-            className={`px-4 py-2 rounded-md ${
-              view === "pending" ? "bg-black text-white" : "bg-gray-200"
-            }`}
-            onClick={() => setView("pending")}
-          >
-            Pending ({pendingSalons.length})
-          </button>
-          <button
-            className={`px-4 py-2 rounded-md ${
-              view === "approved" ? "bg-black text-white" : "bg-gray-200"
-            }`}
-            onClick={() => setView("approved")}
-          >
-            Approved ({approvedSalons.length})
-          </button>
-          <button
-            className={`px-4 py-2 rounded-md ${
-              view === "rejected" ? "bg-black text-white" : "bg-gray-200"
-            }`}
-            onClick={() => setView("rejected")}
-          >
-            Rejected ({rejectedSalons.length})
-          </button>
+    <div className="min-h-screen bg-gray-50 px-10 lg:px-20 py-12 space-y-10">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">Salon Verification Panel</h1>
+          <p className="text-gray-500 mt-1">
+            Review and approve pending salon applications.
+          </p>
         </div>
-
-        <div className="space-y-4">
-          {salonsToShow.length > 0 ? (
-            salonsToShow.map((salon) => (
-              <SalonCard
-                key={salon.id}
-                salon={salon}
-                showActions={view === "pending"}
-              />
-            ))
-          ) : (
-            <p className="text-gray-500 text-center py-8">No salons found</p>
-          )}
-        </div>
-
-        {/* Guidelines Section */}
-        <div className="mt-10 border-t pt-6">
-          <h3 className="text-lg font-semibold mb-3">
-            Verification Guidelines
-          </h3>
-          <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-            <li>Verify business license is valid and current.</li>
-            <li>Confirm business address matches license.</li>
-            <li>Check for any red flags or inconsistencies.</li>
-            <li>Verify contact information is reachable.</li>
-          </ul>
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search salons..."
+            className="pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
         </div>
       </div>
 
-      {/* Rejection Modal */}
-      {selectedSalon && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg space-y-4">
-            <h3 className="font-semibold text-lg">Reject Application</h3>
-            <p className="text-sm text-gray-600">
-              Provide a reason for rejecting{" "}
-              <strong>{selectedSalon.name}</strong>
-            </p>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              rows="4"
-              placeholder="Enter reason..."
-              className="w-full border rounded-md p-2 text-sm"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setSelectedSalon(null)}
-                className="px-3 py-1 bg-gray-200 rounded-md"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleReject(selectedSalon)}
-                disabled={!rejectionReason}
-                className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                Confirm Reject
-              </button>
+      {/* Verification List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {salons.map((salon) => (
+          <Card key={salon.id} className="shadow-md border border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-gray-800">
+                {salon.name}
+              </CardTitle>
+              <CardDescription>
+                Owner: {salon.owner}  •  {salon.city}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-gray-600">
+                <p>
+                  <strong>License:</strong> {salon.license}
+                </p>
+              </div>
+
+              {salon.status === "approved" ? (
+                <Badge className="bg-green-100 text-green-700">Approved</Badge>
+              ) : salon.status === "rejected" ? (
+                <Badge className="bg-red-100 text-red-700">Rejected</Badge>
+              ) : (
+                <Badge className="bg-yellow-100 text-yellow-700">Pending Review</Badge>
+              )}
+
+              <div className="flex justify-between mt-4">
+                {salon.status === "pending" ? (
+                  <>
+                    <Button
+                      className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1"
+                      onClick={() => handleStatusChange(salon.id, "approved")}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="text-red-600 border-red-300 text-sm px-3 py-1"
+                      onClick={() => handleStatusChange(salon.id, "rejected")}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="text-yellow-600 border-yellow-300 text-sm px-3 py-1"
+                      onClick={() => alert("Requested additional information.")}
+                    >
+                      Request Info
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="text-gray-600 text-sm"
+                    onClick={() => handleStatusChange(salon.id, "pending")}
+                  >
+                    Reset
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* System Message */}
+      <Card className="shadow-md border border-gray-200">
+        <CardHeader className="flex items-center gap-2">
+          <AlertCircle className="h-5 w-5 text-purple-600" />
+          <CardTitle>Verification Status Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertDescription>
+              Admins should review pending applications within 48 hours. Notifications are sent to owners automatically after approval or rejection.
+            </AlertDescription>
+          </Alert>
+          <div className="grid grid-cols-3 gap-4 text-center mt-4">
+            <div>
+              <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-1" />
+              <p className="text-sm text-gray-700 font-medium">Approved: 2</p>
+            </div>
+            <div>
+              <XCircle className="h-6 w-6 text-red-600 mx-auto mb-1" />
+              <p className="text-sm text-gray-700 font-medium">Rejected: 1</p>
+            </div>
+            <div>
+              <AlertCircle className="h-6 w-6 text-yellow-600 mx-auto mb-1" />
+              <p className="text-sm text-gray-700 font-medium">Pending: 3</p>
             </div>
           </div>
-        </div>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
