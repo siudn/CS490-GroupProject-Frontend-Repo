@@ -1,11 +1,7 @@
-import PlatformMonitoring from "./components/admin/PlatformMonitoring";
+import AdminAnalytics from "./components/admin/AdminAnalytics";
 
 function App() {
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <PlatformMonitoring />
-    </div>
-  );
+  return <AdminAnalytics />;
 }
 
 export default App;
