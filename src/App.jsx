@@ -1,8 +1,8 @@
 import React from "react";
-import RejectionNotice from "./components/admin/RejectionNotice";
+import AdminPreview from "./pages/AdminPreview";
 
 function App() {
-  return <RejectionNotice />;
+  return <AdminPreview />;
 }
 
 export default App;
