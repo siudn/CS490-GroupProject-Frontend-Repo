@@ -1,7 +1,12 @@
-import AdminAnalytics from "./components/admin/AdminAnalytics";
+import React from "react";
+import RejectionNotice from "./components/admin/RejectionNotice";
 
 function App() {
-  return <AdminAnalytics />;
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <RejectionNotice />
+    </div>
+  );
 }
 
 export default App;
