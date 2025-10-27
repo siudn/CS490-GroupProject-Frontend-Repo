@@ -1,4 +1,8 @@
-import AdminDashboard from "./components/admin/AdminDashboard";
-export default function App() {
-  return <AdminDashboard />;
+import React from "react";
+import ResubmissionForm from "./components/admin/ResubmissionForm";
+
+function App() {
+  return <ResubmissionForm />;
 }
+
+export default App;
