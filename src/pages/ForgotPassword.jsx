@@ -46,11 +46,12 @@ export default function ForgotPassword() {
             placeholder="you@example.com"
             required
             aria-invalid={!!error && !isValidEmail(email)}
-            style={{ border: !!error && !isValidEmail(email) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
+            className="input"
+            style={{ border: !!error && !isValidEmail(email) ? "1px solid #ef4444" : undefined, width: "100%" }}
           />
         </FormField>
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="btn" disabled={loading}>
           {loading ? "Sending..." : "Send reset link"}
         </button>
       </form>

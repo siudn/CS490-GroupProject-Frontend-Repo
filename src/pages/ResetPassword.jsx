@@ -54,11 +54,12 @@ export default function ResetPassword() {
             placeholder="••••••••"
             required
             aria-invalid={!!error && !isStrongPassword(password)}
-            style={{ border: !!error && !isStrongPassword(password) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
+            className="input"
+            style={{ border: !!error && !isStrongPassword(password) ? "1px solid #ef4444" : undefined, width: "100%" }}
           />
         </FormField>
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="btn" disabled={loading}>
           {loading ? "Resetting..." : "Reset password"}
         </button>
       </form>

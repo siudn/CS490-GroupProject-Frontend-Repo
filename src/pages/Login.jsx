@@ -56,6 +56,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
+            className="input"
             style={inputStyle(!!error && !isValidEmail(email))}
             required
             aria-invalid={!!error && !isValidEmail(email)}
@@ -68,13 +69,14 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
+            className="input"
             style={inputStyle(!!error && !password)}
             required
             aria-invalid={!!error && !password}
           />
         </FormField>
 
-        <button type="submit" disabled={loading}>
+        <button type="submit" className="btn" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}
         </button>
       </form>
