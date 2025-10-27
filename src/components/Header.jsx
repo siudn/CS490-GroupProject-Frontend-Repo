@@ -7,6 +7,7 @@ export default function Header() {
           <a href="/" style={styles.link}>Home</a>
           <a href="/browse" style={styles.link}>Browse</a>
           <a href="/booking" style={styles.link}>Booking</a>
+          <a href="/register" style={styles.link}>Register</a>
         </nav>
       </div>
     </header>

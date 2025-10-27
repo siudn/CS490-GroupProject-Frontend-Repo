@@ -3,6 +3,7 @@ import Header from "./components/Header.jsx";
 import Home from "./pages/Home.jsx";
 import Browse from "./pages/Browse.jsx";
 import Booking from "./pages/Booking.jsx";
+import Register from "./pages/Register.jsx";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/booking" element={<Booking />} />
+          <Route path="/register" element={<Register />} />
         </Routes>
       </main>
     </>

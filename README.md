@@ -14,3 +14,12 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Reference workspace (safe paste area)
+
+Use the `reference/` directory at the repo root to paste code and notes from external projects. It is ignored by Git and ESLint and is not included in Vite builds, so nothing there will affect your app unless you explicitly import it.
+
+Recommended structure inside `reference/`:
+- `notes.md` – quick notes and links
+- `snippets/` – small code snippets grouped by topic
+- `modules/` – larger files copied for reference only
