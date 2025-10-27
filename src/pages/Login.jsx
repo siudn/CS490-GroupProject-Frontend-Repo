@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { isValidEmail } from "../lib/validation.js";
 import { mockLogin } from "../lib/mockApi.js";
+import { saveSession } from "../lib/session.js";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -23,10 +26,9 @@ export default function Login() {
 
     setLoading(true);
     try {
-      await mockLogin({ email, password });
-      // Session handling in FRONT-04; for now just show success inline
-      setError("");
-      alert("Login successful (mock). Session handling coming in FRONT-04.");
+      const res = await mockLogin({ email, password });
+      saveSession(res);
+      navigate('/dashboard');
     } catch (err) {
       setError(err?.message || "Login failed.");
     } finally {

@@ -1,3 +1,5 @@
+import LogoutButton from "./LogoutButton.jsx";
+
 export default function Header() {
   return (
     <header style={styles.header}>
@@ -9,6 +11,11 @@ export default function Header() {
           <a href="/booking" style={styles.link}>Booking</a>
           <a href="/register" style={styles.link}>Register</a>
           <a href="/login" style={styles.link}>Login</a>
+          <a href="/dashboard" style={styles.link}>Dashboard</a>
+          <span>
+            {/* inline button to the right */}
+            <LogoutButton />
+          </span>
         </nav>
       </div>
     </header>
