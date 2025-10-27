@@ -1,99 +1,104 @@
-import React, { useState } from "react";
-import {
-  Users,
-  DollarSign,
-  TrendingUp,
-  Calendar,
-  BarChart3,
-  PieChart,
-  Download,
-} from "lucide-react";
+import React from "react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Separator } from "../ui/separator";
 
 export default function AdminAnalytics() {
-  const [tab, setTab] = useState("engagement");
+  const stats = [
+    { label: "Total Bookings", value: "12,490", growth: "+12%" },
+    { label: "Active Users", value: "4,312", growth: "+8%" },
+    { label: "Monthly Revenue", value: "$82,540", growth: "+15%" },
+    { label: "Returning Customers", value: "2,140", growth: "+5%" },
+  ];
+
+  const recentActivity = [
+    { user: "Glam Studio", action: "Reached 100 bookings", date: "Oct 25" },
+    { user: "Style Hub", action: "New 5-star review added", date: "Oct 24" },
+    { user: "Elite Cuts", action: "Joined Salonica platform", date: "Oct 22" },
+    { user: "Bliss Beauty", action: "Crossed $10k monthly revenue", date: "Oct 21" },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12">
-      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-lg p-10">
-        <h2 className="text-3xl font-bold text-center mb-2 text-gray-800">
-          Admin Analytics Dashboard
-        </h2>
-        <p className="text-center text-gray-600 mb-10">
-          Comprehensive insights into platform performance and user behavior.
-        </p>
-
-        {/* Tabs */}
-        <div className="flex justify-center mb-8 gap-3">
-          {["engagement", "appointments", "revenue", "retention"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-md font-medium transition ${
-                tab === t
-                  ? "bg-purple-600 text-white shadow"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
+    <div className="max-w-6xl mx-auto space-y-8">
+      {/* Dashboard Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-800">Engagement Overview</h2>
+          <p className="text-gray-500 text-sm">Track performance across salons</p>
         </div>
-
-        {/* Tab Content */}
-        {tab === "engagement" && (
-          <div className="grid md:grid-cols-4 gap-6">
-            <Card title="Total Users" value="12,453" icon={<Users />} trend="+18%" />
-            <Card title="Daily Active Users" value="3,247" icon={<BarChart3 />} trend="+12%" />
-            <Card title="New Signups" value="847" icon={<Calendar />} trend="This month" />
-            <Card title="Avg Session Duration" value="8m 42s" icon={<TrendingUp />} trend="+15%" />
-          </div>
-        )}
-
-        {tab === "appointments" && (
-          <div className="grid md:grid-cols-4 gap-6">
-            <Card title="Total Appointments" value="45,678" icon={<Calendar />} trend="+24%" />
-            <Card title="Completion Rate" value="94.2%" icon={<Check />} trend="High" />
-            <Card title="Cancel Rate" value="5.8%" icon={<X />} trend="Normal" />
-            <Card title="Avg Lead Time" value="3.2 days" icon={<Clock />} trend="Stable" />
-          </div>
-        )}
-
-        {tab === "revenue" && (
-          <div className="grid md:grid-cols-4 gap-6">
-            <Card title="Total Revenue" value="$1.2 M" icon={<DollarSign />} trend="+32%" />
-            <Card title="Avg Transaction" value="$67.50" icon={<BarChart3 />} trend="+8%" />
-            <Card title="Platform Fee" value="$84,500" icon={<PieChart />} trend="7% of total" />
-            <Card title="Top Salon" value="Elite Studio" icon={<TrendingUp />} trend="$38,450" />
-          </div>
-        )}
-
-        {tab === "retention" && (
-          <div className="grid md:grid-cols-4 gap-6">
-            <Card title="Retention Rate" value="82%" icon={<Users />} trend="+5%" />
-            <Card title="Churn Rate" value="18%" icon={<TrendingUp />} trend="Down from 23%" />
-            <Card title="Lifetime Value" value="$542" icon={<DollarSign />} trend="Rising" />
-            <Card title="Avg Lifetime" value="8.2 months" icon={<Calendar />} trend="Steady" />
-          </div>
-        )}
-
-        <div className="flex justify-end mt-10">
-          <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center gap-2">
-            <Download size={18} />
-            Export Report
-          </button>
-        </div>
+        <Button>Download Report</Button>
       </div>
-    </div>
-  );
-}
 
-function Card({ title, value, icon, trend }) {
-  return (
-    <div className="bg-gray-50 rounded-xl shadow p-6 hover:shadow-md transition text-center">
-      <div className="flex justify-center mb-3 text-purple-600">{icon}</div>
-      <h3 className="font-semibold text-gray-800">{title}</h3>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-      <p className="text-xs text-gray-500 mt-1">{trend}</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((item) => (
+          <Card key={item.label} className="text-center shadow-md border">
+            <CardHeader>
+              <CardTitle className="text-sm text-gray-500">{item.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-gray-800">{item.value}</p>
+              <Badge className="mt-2 bg-green-100 text-green-700">{item.growth}</Badge>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Separator />
+
+      {/* Analytics Insights */}
+      <Card className="shadow-md border">
+        <CardHeader>
+          <CardTitle>Weekly Engagement Summary</CardTitle>
+          <CardDescription>
+            Insights from all partner salons across the platform
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-6 mt-4">
+            <div className="space-y-2">
+              <p className="font-medium">Average Bookings per Salon</p>
+              <p className="text-2xl font-semibold text-purple-600">36.8</p>
+              <p className="text-sm text-gray-500">Up 9% from last week</p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-medium">Customer Retention Rate</p>
+              <p className="text-2xl font-semibold text-purple-600">84%</p>
+              <p className="text-sm text-gray-500">Steady performance</p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-medium">Avg. Rating Across Salons</p>
+              <p className="text-2xl font-semibold text-purple-600">4.7 / 5</p>
+              <p className="text-sm text-gray-500">Based on 9,240 reviews</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity */}
+      <Card className="shadow-md border">
+        <CardHeader>
+          <CardTitle>Recent Platform Activity</CardTitle>
+          <CardDescription>Latest updates from verified salons</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y divide-gray-200">
+            {recentActivity.map((item, idx) => (
+              <div
+                key={idx}
+                className="py-3 flex justify-between items-center hover:bg-gray-50 px-2 rounded-md transition"
+              >
+                <div>
+                  <p className="font-medium text-gray-800">{item.user}</p>
+                  <p className="text-sm text-gray-500">{item.action}</p>
+                </div>
+                <p className="text-xs text-gray-400">{item.date}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
