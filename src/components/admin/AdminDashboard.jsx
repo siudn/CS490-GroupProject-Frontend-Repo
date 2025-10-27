@@ -2,9 +2,11 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import AdminDecisionModal from "./AdminDecisionModal";
 
 export default function AdminDashboard() {
   const [selectedSalon, setSelectedSalon] = useState(null);
+  const [decisionOpen, setDecisionOpen] = useState(false);
 
   const applications = [
     {
@@ -126,11 +128,27 @@ export default function AdminDashboard() {
                 >
                   Close
                 </Button>
-                <Button>Open Review</Button>
+                <Button
+                  onClick={() => {
+                    setDecisionOpen(true);
+                  }}
+                >
+                  Open Review
+                </Button>
               </div>
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {decisionOpen && selectedSalon && (
+        <AdminDecisionModal
+          salon={selectedSalon}
+          onClose={() => {
+            setDecisionOpen(false);
+            setSelectedSalon(null);
+          }}
+        />
       )}
     </div>
   );
