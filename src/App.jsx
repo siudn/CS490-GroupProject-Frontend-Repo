@@ -1,8 +1,8 @@
 import React from "react";
-import ResubmissionForm from "./components/admin/ResubmissionForm";
+import SalonPortalActivation from "./components/admin/SalonPortalActivation";
 
 function App() {
-  return <ResubmissionForm />;
+  return <SalonPortalActivation />;
 }
 
 export default App;
