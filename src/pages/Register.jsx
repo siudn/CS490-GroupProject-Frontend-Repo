@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { isValidEmail, isStrongPassword } from "../lib/validation.js";
 import { mockRegister } from "../lib/mockApi.js";
+import FormField from "../components/FormField.jsx";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -41,8 +42,7 @@ export default function Register() {
       <p>Create your account to start booking or managing your salon.</p>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
-        <label>
-          <div>Email</div>
+        <FormField label="Email" error={!!error && !isValidEmail(email) ? "Enter a valid email." : ""}>
           <input
             type="email"
             value={email}
@@ -52,10 +52,9 @@ export default function Register() {
             aria-invalid={!!error && !isValidEmail(email)}
             style={{ border: !!error && !isValidEmail(email) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
           />
-        </label>
+        </FormField>
 
-        <label>
-          <div>Password</div>
+        <FormField label="Password" error={!!error && !isStrongPassword(password) ? "Must be 8+ chars, include uppercase and number." : ""}>
           <input
             type="password"
             value={password}
@@ -65,7 +64,7 @@ export default function Register() {
             aria-invalid={!!error && !isStrongPassword(password)}
             style={{ border: !!error && !isStrongPassword(password) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
           />
-        </label>
+        </FormField>
 
         <label>
           <div>Account Type</div>

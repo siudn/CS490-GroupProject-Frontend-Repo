@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { isValidEmail } from "../lib/validation.js";
 import { mockRequestPasswordReset } from "../lib/mockApi.js";
+import FormField from "../components/FormField.jsx";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -37,17 +38,17 @@ export default function ForgotPassword() {
       <p>Enter your account email to receive a reset link.</p>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
-        <label>
-          <div>Email</div>
+        <FormField label="Email" error={!!error && !isValidEmail(email) ? "Enter a valid email." : ""}>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
-            style={{ border: error ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
+            aria-invalid={!!error && !isValidEmail(email)}
+            style={{ border: !!error && !isValidEmail(email) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
           />
-        </label>
+        </FormField>
 
         <button type="submit" disabled={loading}>
           {loading ? "Sending..." : "Send reset link"}

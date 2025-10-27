@@ -3,6 +3,7 @@ import { isValidEmail } from "../lib/validation.js";
 import { mockLogin } from "../lib/mockApi.js";
 import { saveSession } from "../lib/session.js";
 import { useNavigate } from "react-router-dom";
+import FormField from "../components/FormField.jsx";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -49,8 +50,7 @@ export default function Login() {
       <p>Enter your credentials to continue.</p>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
-        <label>
-          <div>Email</div>
+        <FormField label="Email" error={!!error && !isValidEmail(email) ? "Enter a valid email." : ""}>
           <input
             type="email"
             value={email}
@@ -58,11 +58,11 @@ export default function Login() {
             placeholder="you@example.com"
             style={inputStyle(!!error && !isValidEmail(email))}
             required
+            aria-invalid={!!error && !isValidEmail(email)}
           />
-        </label>
+        </FormField>
 
-        <label>
-          <div>Password</div>
+        <FormField label="Password" error={!!error && !password ? "Password is required." : ""}>
           <input
             type="password"
             value={password}
@@ -70,8 +70,9 @@ export default function Login() {
             placeholder="••••••••"
             style={inputStyle(!!error && !password)}
             required
+            aria-invalid={!!error && !password}
           />
-        </label>
+        </FormField>
 
         <button type="submit" disabled={loading}>
           {loading ? "Signing in..." : "Sign in"}

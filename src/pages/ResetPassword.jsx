@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { isStrongPassword } from "../lib/validation.js";
 import { mockResetPassword } from "../lib/mockApi.js";
+import FormField from "../components/FormField.jsx";
 
 export default function ResetPassword() {
   const [token, setToken] = useState("");
@@ -41,17 +42,17 @@ export default function ResetPassword() {
       <p>Enter a new password for your account.</p>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12, maxWidth: 360 }}>
-        <label>
-          <div>New Password</div>
+        <FormField label="New Password" error={!!error && !isStrongPassword(password) ? "Must be 8+ chars, include uppercase and number." : ""}>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
-            style={{ border: error ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
+            aria-invalid={!!error && !isStrongPassword(password)}
+            style={{ border: !!error && !isStrongPassword(password) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
           />
-        </label>
+        </FormField>
 
         <button type="submit" disabled={loading}>
           {loading ? "Resetting..." : "Reset password"}
