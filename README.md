@@ -148,7 +148,7 @@ http://localhost:5173/
 
 ---
 
-## ✅ Quick Summary (for the “one dumbass” teammate)
+## ✅ Quick Summary
 
 - ❌ Don’t touch `App.jsx`
 - ✅ Work only in your feature folder
