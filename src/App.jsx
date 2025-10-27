@@ -1,12 +1,4 @@
-import React from "react";
-import RejectionNotice from "./components/admin/RejectionNotice";
-
-function App() {
-  return (
-    <div className="bg-gray-50 min-h-screen">
-      <RejectionNotice />
-    </div>
-  );
+import AdminDashboard from "./components/admin/AdminDashboard";
+export default function App() {
+  return <AdminDashboard />;
 }
-
-export default App;
