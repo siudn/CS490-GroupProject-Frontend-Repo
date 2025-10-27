@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { isStrongPassword } from "../lib/validation.js";
 import { mockResetPassword } from "../lib/mockApi.js";
 import FormField from "../components/FormField.jsx";
+import { setFlash } from "../lib/flash.js";
+import { useNavigate } from "react-router-dom";
 
 export default function ResetPassword() {
+  const navigate = useNavigate();
   const [token, setToken] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -28,7 +31,8 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await mockResetPassword({ resetToken: token, newPassword: password });
-      setSuccess("Password reset successful. You may now log in.");
+      setFlash("Password reset successful. Please sign in.", "success");
+      navigate('/login');
     } catch (err) {
       setError(err?.message || "Reset failed.");
     } finally {

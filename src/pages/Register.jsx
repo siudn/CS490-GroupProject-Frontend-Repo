@@ -2,8 +2,11 @@ import { useState } from "react";
 import { isValidEmail, isStrongPassword } from "../lib/validation.js";
 import { mockRegister } from "../lib/mockApi.js";
 import FormField from "../components/FormField.jsx";
+import { setFlash } from "../lib/flash.js";
+import { useNavigate } from "react-router-dom";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [accountType, setAccountType] = useState("user");
@@ -28,7 +31,8 @@ export default function Register() {
     setLoading(true);
     try {
       await mockRegister({ email, password, accountType });
-      setSuccess("Registration successful. You may now log in.");
+      setFlash("Registration successful. Please sign in.", "success");
+      navigate('/login');
     } catch (err) {
       setError(err?.message || "Registration failed.");
     } finally {

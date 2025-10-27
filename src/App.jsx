@@ -8,12 +8,18 @@ import Login from "./pages/Login.jsx";
 import ForgotPassword from "./pages/ForgotPassword.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
+import { useEffect, useState } from "react";
+import { consumeFlash } from "./lib/flash.js";
+import FlashBanner from "./components/FlashBanner.jsx";
 
 export default function App() {
+  const [flash, setFlash] = useState({ message: "", type: "success" });
+  useEffect(() => setFlash(consumeFlash()), []);
   return (
     <>
       <Header />
       <main className="main">
+        {flash.message && <FlashBanner message={flash.message} type={flash.type} />}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/browse" element={<Browse />} />
