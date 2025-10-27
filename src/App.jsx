@@ -1,8 +1,8 @@
 import React from "react";
-import SalonPortalActivation from "./components/admin/SalonPortalActivation";
+import RejectionNotice from "./components/admin/RejectionNotice";
 
 function App() {
-  return <SalonPortalActivation />;
+  return <RejectionNotice />;
 }
 
 export default App;
