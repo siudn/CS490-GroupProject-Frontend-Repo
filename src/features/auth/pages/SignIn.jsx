@@ -1,3 +1,5 @@
+// example page - you can delete, rename, edit this
+// but be sure to add your own pages to YOUR OWN routes.jsx file
 import { useAuth } from "../auth-provider.jsx";
 import { useNavigate } from "react-router-dom";
 

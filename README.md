@@ -26,7 +26,7 @@ No one should touch the root app files — everything is already wired up.
 - `auth/` → login & signup (Auth team)
 - `booking/` → customer booking flow
 - `schedule/` → barber/staff schedule management
-- `salon-admin/` → salon registration + admin verification
+- `salon-reg/` → salon registration + admin verification
 
 ---
 
@@ -46,7 +46,7 @@ src/
       pages/
     booking/
     schedule/
-    salon-admin/
+    salon-reg/
   shared/
     api/client.js        # fetch wrapper
     routing/Protected.jsx
