@@ -1,14 +1,38 @@
 import { useState } from "react";
+import { isValidEmail, isStrongPassword } from "../lib/validation.js";
+import { mockRegister } from "../lib/mockApi.js";
 
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [accountType, setAccountType] = useState("user");
+  const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setSuccess("Registration successful. You may now log in.");
+    setError("");
+    setSuccess("");
+
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+    if (!isStrongPassword(password)) {
+      setError("Password must be 8+ chars, include an uppercase letter and a number.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await mockRegister({ email, password, accountType });
+      setSuccess("Registration successful. You may now log in.");
+    } catch (err) {
+      setError(err?.message || "Registration failed.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -25,6 +49,8 @@ export default function Register() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             required
+            aria-invalid={!!error && !isValidEmail(email)}
+            style={{ border: !!error && !isValidEmail(email) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
           />
         </label>
 
@@ -36,6 +62,8 @@ export default function Register() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
+            aria-invalid={!!error && !isStrongPassword(password)}
+            style={{ border: !!error && !isStrongPassword(password) ? "1px solid #ef4444" : "1px solid #d1d5db", padding: 10, borderRadius: 6, width: "100%" }}
           />
         </label>
 
@@ -48,8 +76,14 @@ export default function Register() {
           </select>
         </label>
 
-        <button type="submit">Create account</button>
+        <button type="submit" disabled={loading}>{loading ? "Creating..." : "Create account"}</button>
       </form>
+
+      {error && (
+        <div role="alert" style={{ marginTop: 16, padding: 12, background: "#fef2f2", border: "1px solid #ef4444", color: "#991b1b" }}>
+          {error}
+        </div>
+      )}
 
       {success && (
         <div role="status" style={{ marginTop: 16, padding: 12, background: "#ecfdf5", border: "1px solid #10b981", color: "#065f46" }}>
