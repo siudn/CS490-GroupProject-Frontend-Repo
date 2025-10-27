@@ -1,5 +1,23 @@
 # 💈 Salon App — Frontend Setup Guide
 
+## ⚙️ Quick Setup (do this first)
+1. Create a file named **`.env.local`** in the project root.
+2. Add the following lines:
+   ```
+   VITE_AUTH_MODE=stub
+   VITE_API=http://localhost:3000
+   ```
+   - `VITE_AUTH_MODE=stub` → lets you log in with demo buttons (no backend needed)
+   - `VITE_AUTH_MODE=real` → switches to real API when ready
+3. Make sure `.env.local` is **ignored by Git**:
+   ```
+   # .gitignore
+   .env.local
+   ```
+   This keeps secrets or API URLs out of version control.
+
+---
+
 ## 🚀 Overview
 This app is organized by **feature**.  
 No one should touch the root app files — everything is already wired up.
@@ -8,7 +26,7 @@ No one should touch the root app files — everything is already wired up.
 - `auth/` → login & signup (Auth team)
 - `booking/` → customer booking flow
 - `schedule/` → barber/staff schedule management
-- `salon-reg/` → salon registration + admin verification
+- `salon-admin/` → salon registration + admin verification
 
 ---
 
@@ -28,7 +46,7 @@ src/
       pages/
     booking/
     schedule/
-    salon-reg/
+    salon-admin/
   shared/
     api/client.js        # fetch wrapper
     routing/Protected.jsx
@@ -39,7 +57,7 @@ src/
 ## 🔑 Auth System (How It Works)
 
 - Everything runs under a single **AuthProvider** that gives `{ user, login, logout }`.
-- Uses `.env` to toggle between:
+- `.env.local` controls mode:
   - `VITE_AUTH_MODE=stub` → fake login (for dev)
   - `VITE_AUTH_MODE=real` → backend API login
 - In **stub mode**, the sign-in page has “Demo Customer / Owner / Barber / Admin” buttons.
@@ -118,7 +136,7 @@ Implement the backend endpoints:
 
 ## 🧩 Local Dev Setup
 ```bash
-# Install deps
+# Install dependencies
 npm install
 
 # Run dev server
@@ -128,19 +146,14 @@ npm run dev
 http://localhost:5173/
 ```
 
-**.env.local**
-```
-VITE_AUTH_MODE=stub
-VITE_API=http://localhost:3000
-```
-
 ---
 
-## ✅ Quick Summary
+## ✅ Quick Summary (for the “one dumbass” teammate)
 
 - ❌ Don’t touch `App.jsx`
 - ✅ Work only in your feature folder
 - ➕ Add pages → register them in your `routes.jsx`
+- 🔑 Create `.env.local` (see top)
 - 🔑 To simulate login → go to `/auth/sign-in` → click a Demo button
 - 👤 Need user info → `const { user } = useAuth()`
 - 🧠 That’s it. Everything auto-loads.
