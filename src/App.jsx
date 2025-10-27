@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import { useEffect, useState } from "react";
 import { consumeFlash } from "./lib/flash.js";
 import FlashBanner from "./components/FlashBanner.jsx";
+import Auth from "./pages/Auth.jsx";
 
 export default function App() {
   const [flash, setFlash] = useState({ message: "", type: "success" });
@@ -21,7 +22,7 @@ export default function App() {
       <main className="main">
         {flash.message && <FlashBanner message={flash.message} type={flash.type} />}
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Auth />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/booking" element={<Booking />} />
           <Route path="/register" element={<Register />} />
