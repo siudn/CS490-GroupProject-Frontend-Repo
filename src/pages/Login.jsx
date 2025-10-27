@@ -81,6 +81,10 @@ export default function Login() {
           {error}
         </div>
       )}
+
+      <div style={{ marginTop: 12 }}>
+        <a href="/forgot">Forgot your password?</a>
+      </div>
     </div>
   );
 }
