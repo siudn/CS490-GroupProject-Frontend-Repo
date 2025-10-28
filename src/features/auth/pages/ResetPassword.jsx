@@ -118,19 +118,22 @@ export default function ResetPassword() {
 
   if (!tokenValid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-              Invalid Reset Link
-            </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
-              This password reset link is invalid or has expired.
-            </p>
-            <div className="mt-6">
+      <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-pink-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-3xl shadow-xl p-8">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-800 mb-2">Salonica</h1>
+              <p className="text-sm text-gray-600 mb-8">Manage your salon appointments and loyalty rewards</p>
+              
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Invalid Reset Link
+              </h2>
+              <p className="text-sm text-gray-600 mb-8">
+                This password reset link is invalid or has expired.
+              </p>
               <button
                 onClick={() => navigate("/auth/forgot-password")}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="w-full py-3 px-4 bg-gray-800 text-white font-medium rounded-xl hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
               >
                 Request New Reset Link
               </button>
@@ -142,22 +145,40 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Reset your password
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your new password below.
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-pink-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <div className="bg-white rounded-3xl shadow-xl p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Salonica</h1>
+            <p className="text-sm text-gray-600">Manage your salon appointments and loyalty rewards</p>
+          </div>
+
+          {/* Navigation Tabs */}
+          <div className="flex mb-8 bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => navigate("/auth/sign-in")}
+              className="flex-1 py-2 px-4 text-sm font-medium text-gray-600 rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => navigate("/auth/sign-up")}
+              className="flex-1 py-2 px-4 text-sm font-medium text-gray-600 rounded-lg transition-colors"
+            >
+              Sign Up
+            </button>
+            <button
+              className="flex-1 py-2 px-4 text-sm font-medium text-white bg-gray-600 rounded-lg transition-colors"
+            >
+              Reset
+            </button>
+          </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+          <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 New Password
               </label>
               <input
@@ -167,11 +188,14 @@ export default function ResetPassword() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.password ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                placeholder="Enter your new password"
+                className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  errors.password ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+                placeholder="••••••••"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Must be 8+ characters with uppercase, lowercase, and number.
+              </p>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password}</p>
               )}
@@ -179,7 +203,7 @@ export default function ResetPassword() {
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                 Confirm New Password
               </label>
               <input
@@ -189,54 +213,52 @@ export default function ResetPassword() {
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-                placeholder="Confirm your new password"
+                className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  errors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+                placeholder="••••••••"
               />
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
               )}
             </div>
-          </div>
 
-          {/* Submit Error */}
-          {errors.submit && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{errors.submit}</p>
-            </div>
-          )}
+            {/* Submit Error */}
+            {errors.submit && (
+              <div className="rounded-xl bg-red-50 p-4 border border-red-200">
+                <p className="text-sm text-red-800">{errors.submit}</p>
+              </div>
+            )}
 
-          {/* Success Message */}
-          {successMessage && (
-            <div className="rounded-md bg-green-50 p-4">
-              <p className="text-sm text-green-800">{successMessage}</p>
-            </div>
-          )}
+            {/* Success Message */}
+            {successMessage && (
+              <div className="rounded-xl bg-green-50 p-4 border border-green-200">
+                <p className="text-sm text-green-800">{successMessage}</p>
+              </div>
+            )}
 
-          <div>
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 bg-gray-800 text-white font-medium rounded-xl hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? "Resetting..." : "Reset Password"}
             </button>
-          </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Remember your password?{" "}
-              <button
-                type="button"
-                onClick={() => navigate("/auth/sign-in")}
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Sign in here
-              </button>
-            </p>
-          </div>
-        </form>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/auth/sign-in")}
+                  className="text-sm text-gray-600 hover:text-purple-600 transition-colors"
+                >
+                  Sign in here
+                </button>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

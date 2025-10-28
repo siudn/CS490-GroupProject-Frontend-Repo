@@ -21,7 +21,7 @@ export default function Header() {
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-4">
-          <div className="text-lg font-extrabold text-indigo-600">SalonApp</div>
+          <div className="text-lg font-extrabold text-indigo-600">Salonica</div>
           <nav className="flex gap-2">
             <NavLink to="/booking" className={linkClass}>Booking</NavLink>
             <NavLink to="/schedule" className={linkClass}>Schedule</NavLink>

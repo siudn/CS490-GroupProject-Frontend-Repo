@@ -75,76 +75,97 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Forgot your password?
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            No worries! Enter your email address and we'll send you a link to reset your password.
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email Address
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              value={email}
-              onChange={handleEmailChange}
-              className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                errors.email ? 'border-red-300' : 'border-gray-300'
-              } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
-              placeholder="Enter your email address"
-            />
-            {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-            )}
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-pink-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full">
+        <div className="bg-white rounded-3xl shadow-xl p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Salonica</h1>
+            <p className="text-sm text-gray-600">Manage your salon appointments and loyalty rewards</p>
           </div>
 
-          {/* Submit Error */}
-          {errors.submit && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{errors.submit}</p>
+          {/* Navigation Tabs */}
+          <div className="flex mb-8 bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => navigate("/auth/sign-in")}
+              className="flex-1 py-2 px-4 text-sm font-medium text-gray-600 rounded-lg transition-colors"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => navigate("/auth/sign-up")}
+              className="flex-1 py-2 px-4 text-sm font-medium text-gray-600 rounded-lg transition-colors"
+            >
+              Sign Up
+            </button>
+            <button
+              className="flex-1 py-2 px-4 text-sm font-medium text-white bg-gray-600 rounded-lg transition-colors"
+            >
+              Reset
+            </button>
+          </div>
+        
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={email}
+                onChange={handleEmailChange}
+                className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  errors.email ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+                placeholder="you@example.com"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                We'll send you a password reset link
+              </p>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
             </div>
-          )}
 
-          {/* Success Message */}
-          {successMessage && (
-            <div className="rounded-md bg-green-50 p-4">
-              <p className="text-sm text-green-800">{successMessage}</p>
-            </div>
-          )}
+            {/* Submit Error */}
+            {errors.submit && (
+              <div className="rounded-xl bg-red-50 p-4 border border-red-200">
+                <p className="text-sm text-red-800">{errors.submit}</p>
+              </div>
+            )}
 
-          <div>
+            {/* Success Message */}
+            {successMessage && (
+              <div className="rounded-xl bg-green-50 p-4 border border-green-200">
+                <p className="text-sm text-green-800">{successMessage}</p>
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 bg-gray-800 text-white font-medium rounded-xl hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? "Sending..." : "Send Reset Link"}
             </button>
-          </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Remember your password?{" "}
-              <button
-                type="button"
-                onClick={() => navigate("/auth/sign-in")}
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Sign in here
-              </button>
-            </p>
-          </div>
-        </form>
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/auth/sign-in")}
+                  className="text-sm text-gray-600 hover:text-purple-600 transition-colors"
+                >
+                  Sign in here
+                </button>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
