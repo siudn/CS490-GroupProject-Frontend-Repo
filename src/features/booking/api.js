@@ -1,12 +1,12 @@
 import { api } from "../../shared/api/client.js";
 
-/** Get services (mock or real) */
+// get services
 export async function listServices() {
   if (import.meta.env.VITE_MOCK === "1") return MOCK_SERVICES;
   return api("/services"); // -> ["haircut","color",...]
 }
 
-/** Get salons; only use coords when sort === 'nearby' */
+// get salons
 export async function listSalons({
   q = "",
   location = "",
@@ -37,7 +37,6 @@ export async function listSalons({
   }
   const rows = await api(`/salons?${params.toString()}`);
 
-  // If backend doesn't return distance/sorting yet, handle here
   if (useCoords) {
     return rows
       .map((s) => ({ ...s, distMiles: s.coords ? distanceMiles(coords, s.coords) : null }))
@@ -47,7 +46,7 @@ export async function listSalons({
   return rows;
 }
 
-/** Get a single salon with details (services, hours, gallery) */
+// details for single salon, by id
 export async function getSalon(id) {
   if (import.meta.env.VITE_MOCK === "1") {
     const s = MOCK_SALON_DETAILS[id];
@@ -57,7 +56,7 @@ export async function getSalon(id) {
   return api(`/salons/${id}`);
 }
 
-/** Get paged reviews for a salon (simple first page for now) */
+// get reviews for salon
 export async function getSalonReviews(id) {
   if (import.meta.env.VITE_MOCK === "1") {
     return (MOCK_SALON_DETAILS[id]?.reviews || []).slice(0, 6);
@@ -72,7 +71,6 @@ export async function listEmployees(salonId) {
 
 export async function listAvailability({ salonId, employeeId, dateISO }) {
   if (import.meta.env.VITE_MOCK === "1") {
-    // simple deterministic mock: some slots blocked/booked
     const base = ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"];
     const n = (new Date(dateISO).getDate() + Number(employeeId?.slice(-1))) % 3;
     return base.map((t,i) => (i % 4 === n ? { time: t, status: "blocked"} : { time: t, status: i % 3 === n ? "booked" : "free"}));
@@ -84,13 +82,29 @@ export async function listUserAppointments() {
   if (import.meta.env.VITE_MOCK === "1") return MOCK_APPTS;
   return api("/me/appointments"); // expected: { active:[], history:[] }
 }
-export async function cancelAppointment(id) {
-  if (import.meta.env.VITE_MOCK === "1") return { ok: true };
-  return api(`/appointments/${id}/cancel`, { method: "POST" });
-}
+
 export async function prepReschedule(id) {
   if (import.meta.env.VITE_MOCK === "1") return { ok: true };
   return api(`/appointments/${id}/reschedule`, { method: "GET" });
+}
+
+export async function rescheduleAppointment(id, { dateISO, time }) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    const whenISO = new Date(`${dateISO}T${time}:00Z`).toISOString();
+    return { ok: true, updated: { id, whenISO, status: "confirmed" } };
+  }
+  return api(`/appointments/${id}/reschedule`, {
+    method: "POST",
+    body: JSON.stringify({ date: dateISO, time }),
+  });
+}
+
+export async function cancelAppointment(id, reason) {
+  if (import.meta.env.VITE_MOCK === "1") return { ok: true };
+  return api(`/appointments/${id}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
 }
 
 /* ---------------- Helpers + Mock ---------------- */
