@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarIcon, Clock, User as UserIcon, CheckCircle } from "lucide-react";
+import { CalendarIcon, Clock, User as UserIcon, CheckCircle, AlertCircle } from "lucide-react";
 
 const timeSlots = [
   '9:00 AM',
@@ -28,6 +28,7 @@ export default function ProviderDashboard() {
     notes: '',
     status: 'confirmed'
   });
+  const [conflictError, setConflictError] = useState(null);
   
   const handleDateClick = (dateNumber) => {
     if (dateNumber >= 1 && dateNumber <= 31 && !isNaN(dateNumber)) {
@@ -56,6 +57,15 @@ export default function ProviderDashboard() {
     new Date(b) - new Date(a)
   );
 
+  // Check if an appointment date is in the past
+  const isPastDate = (dateString) => {
+    const appointmentDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    appointmentDate.setHours(0, 0, 0, 0);
+    return appointmentDate < today;
+  };
+
   const getSlotStatus = (time) => {
     const hasAppointment = todayAppointments.find((a) => a.time === time);
     const isBlocked = blockedSlots.includes(time);
@@ -67,9 +77,19 @@ export default function ProviderDashboard() {
 
   const handleBlockSlot = () => {
     if (selectedSlot) {
+      // Check for conflicts
+      const hasExistingAppointment = todayAppointments.find((a) => a.time === selectedSlot);
+      
+      if (hasExistingAppointment) {
+        setConflictError(`Cannot block ${selectedSlot} - Appointment already scheduled at this time`);
+        setTimeout(() => setConflictError(null), 5000);
+        return;
+      }
+      
       setBlockedSlots([...blockedSlots, selectedSlot]);
       setShowBlockDialog(false);
       setSelectedSlot('');
+      setConflictError(null);
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 3000);
     }
@@ -92,9 +112,29 @@ export default function ProviderDashboard() {
   };
 
   const handleSaveEdit = () => {
+    // Check for scheduling conflicts
+    const conflictingTime = editFormData.time;
+    const hasConflict = todayAppointments.some(
+      (a) => a.time === conflictingTime && a.id !== editingAppointment?.id
+    );
+    const isBlocked = blockedSlots.includes(conflictingTime);
+    
+    if (hasConflict) {
+      setConflictError(`Cannot schedule at ${conflictingTime} - Time slot is already booked`);
+      setTimeout(() => setConflictError(null), 5000);
+      return;
+    }
+    
+    if (isBlocked) {
+      setConflictError(`Cannot schedule at ${conflictingTime} - Time slot is blocked`);
+      setTimeout(() => setConflictError(null), 5000);
+      return;
+    }
+    
     // In a real app, this would call an API
     console.log('Saving appointment:', editingAppointment, editFormData);
     setShowEditModal(false);
+    setConflictError(null);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
@@ -111,6 +151,14 @@ export default function ProviderDashboard() {
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <p className="text-green-600">Schedule updated successfully!</p>
+        </div>
+      )}
+
+      {/* Conflict Error Alert */}
+      {conflictError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 text-red-600" />
+          <p className="text-red-600">{conflictError}</p>
         </div>
       )}
 
@@ -329,19 +377,23 @@ export default function ProviderDashboard() {
                 {sortedDates.map((date) => {
                   const dateAppointments = appointmentsByDate[date];
                   const dateObj = new Date(date);
+                  const isPast = isPastDate(date);
                   
                   return (
                     <div key={date} className="border-b border-gray-200 pb-6 last:border-b-0">
                       {/* Date Header */}
                       <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {dateObj.toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            month: 'long', 
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </h3>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {dateObj.toLocaleDateString('en-US', { 
+                          weekday: 'long', 
+                          month: 'long', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                        {isPast && (
+                          <span className="ml-2 text-sm text-gray-500">(Past)</span>
+                        )}
+                      </h3>
                         <p className="text-sm text-gray-600">
                           {dateAppointments.length} appointment{dateAppointments.length !== 1 ? 's' : ''}
                         </p>
@@ -373,12 +425,17 @@ export default function ProviderDashboard() {
                                 <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
                                   {appointment.status}
                                 </span>
-                                <button
-                                  onClick={() => handleEditAppointment(appointment)}
-                                  className="px-3 py-1.5 bg-gray-200 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-300"
-                                >
-                                  Edit
-                                </button>
+                                {!isPast && (
+                                  <button
+                                    onClick={() => handleEditAppointment(appointment)}
+                                    className="px-3 py-1.5 bg-gray-200 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-300"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {isPast && (
+                                  <span className="text-xs text-gray-500">Completed</span>
+                                )}
                               </div>
                             </div>
                           ))}
