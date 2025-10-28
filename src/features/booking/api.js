@@ -107,6 +107,27 @@ export async function cancelAppointment(id, reason) {
   });
 }
 
+export async function listVendorRequests() {
+  if (import.meta.env.VITE_MOCK === "1") return MOCK_VENDOR_REQUESTS;
+  return api("/vendor/appointments"); // expected: { pending:[], upcoming:[], denied:[] }
+}
+
+export async function vendorConfirm(id, msg) {
+  if (import.meta.env.VITE_MOCK === "1") return { ok: true };
+  return api(`/vendor/appointments/${id}/confirm`, {
+    method: "POST",
+    body: JSON.stringify({ message: msg }),
+  });
+}
+
+export async function vendorDeny(id, reason) {
+  if (import.meta.env.VITE_MOCK === "1") return { ok: true };
+  return api(`/vendor/appointments/${id}/deny`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
 /* ---------------- Helpers + Mock ---------------- */
 
 function distanceMiles(a, b) {
@@ -307,6 +328,53 @@ const MOCK_APPTS = {
       status: "cancelled",
       paymentStatus: "refunded",
       cancellationReason: "Schedule conflict",
+    },
+  ],
+};
+
+const MOCK_VENDOR_REQUESTS = {
+  pending: [
+    {
+      id: "V-5001",
+      customer: { name: "Alex Rivera" },
+      service: { name: "Haircut", price: 45, durationMin: 40 },
+      whenISO: new Date(Date.now() + 2 * 24 * 3600e3).toISOString(),
+      salon: { id: "1", name: "Elite Hair Studio" },
+      employee: { id: "emp1", name: "John Smith" },
+      note: "Please keep sides short.",
+      status: "awaiting_vendor",
+    },
+    {
+      id: "V-5002",
+      customer: { name: "Sofia Martinez" },
+      service: { name: "Hair Coloring", price: 120, durationMin: 90 },
+      whenISO: new Date(Date.now() + 4 * 24 * 3600e3).toISOString(),
+      salon: { id: "1", name: "Elite Hair Studio" },
+      employee: { id: "emp2", name: "Sarah Johnson" },
+      status: "awaiting_vendor",
+    },
+  ],
+  upcoming: [
+    {
+      id: "V-4990",
+      customer: { name: "Daniel Kim" },
+      service: { name: "Beard Trim", price: 25, durationMin: 20 },
+      whenISO: new Date(Date.now() + 6 * 24 * 3600e3).toISOString(),
+      salon: { id: "1", name: "Elite Hair Studio" },
+      employee: { id: "emp1", name: "John Smith" },
+      status: "confirmed",
+    },
+  ],
+  denied: [
+    {
+      id: "V-4980",
+      customer: { name: "Maya Patel" },
+      service: { name: "Haircut", price: 45, durationMin: 40 },
+      whenISO: new Date(Date.now() + 8 * 24 * 3600e3).toISOString(),
+      salon: { id: "1", name: "Elite Hair Studio" },
+      employee: { id: "emp1", name: "John Smith" },
+      status: "denied",
+      reason: "Staff unavailable at requested time",
     },
   ],
 };
