@@ -173,10 +173,10 @@ export default function SignUp() {
           </div>
         
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Full Name (Combined First + Last) */}
+            {/* First Name */}
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                First Name
               </label>
               <input
                 id="firstName"
@@ -188,10 +188,32 @@ export default function SignUp() {
                 className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
                   errors.firstName ? 'border-red-300 bg-red-50' : 'border-gray-200'
                 }`}
-                placeholder="John Doe"
+                placeholder="John"
               />
               {errors.firstName && (
                 <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+              )}
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                name="lastName"
+                type="text"
+                required
+                value={formData.lastName}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  errors.lastName ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+                placeholder="Doe"
+              />
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
               )}
             </div>
 
