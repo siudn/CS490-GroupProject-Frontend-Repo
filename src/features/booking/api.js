@@ -47,6 +47,24 @@ export async function listSalons({
   return rows;
 }
 
+/** Get a single salon with details (services, hours, gallery) */
+export async function getSalon(id) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    const s = MOCK_SALON_DETAILS[id];
+    if (!s) throw new Error("Salon not found");
+    return s;
+  }
+  return api(`/salons/${id}`);
+}
+
+/** Get paged reviews for a salon (simple first page for now) */
+export async function getSalonReviews(id) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    return (MOCK_SALON_DETAILS[id]?.reviews || []).slice(0, 6);
+  }
+  return api(`/salons/${id}/reviews?limit=6`);
+}
+
 /* ---------------- Helpers + Mock ---------------- */
 
 function distanceMiles(a, b) {
@@ -129,5 +147,77 @@ const MOCK_SALONS = [
     coords: { lat: 40.754, lng: -73.98 },
   },
 ];
+
+const GALLERY1 = [
+  "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?q=80&w=1200&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=1200&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1556228453-bf6e7b3f3a3a?q=80&w=1200&auto=format&fit=crop",
+];
+
+const MOCK_SALON_DETAILS = {
+  "1": {
+    id: "1",
+    name: "Glamour Salon",
+    rating: 4.9,
+    reviewsCount: 203,
+    address: "789 Broadway, New York, NY",
+    hours: "Open 9am - 8pm",
+    blurb: "Full-service salon for all your beauty needs",
+    img: "https://images.unsplash.com/photo-1559599101-f09722fb4948?q=80&w=1200&auto=format&fit=crop",
+    services: [
+      { id: "svc1", name: "Haircut", durationMin: 45, price: 45 },
+      { id: "svc2", name: "Hair Coloring", durationMin: 60, price: 90 },
+      { id: "svc3", name: "Beard Trim", durationMin: 30, price: 30 },
+      { id: "svc4", name: "Hot Towel Shave", durationMin: 45, price: 45 },
+    ],
+    gallery: GALLERY1,
+    reviews: [
+      { id: "r1", user: "Alex R.", stars: 5, text: "Amazing service and friendly staff." },
+      { id: "r2", user: "Sofia M.", stars: 5, text: "Best color I've had in years." },
+      { id: "r3", user: "Daniel K.", stars: 4, text: "Great cut, will return." },
+      { id: "r4", user: "Priya S.", stars: 5, text: "Clean, quick, and professional." },
+      { id: "r5", user: "Michael T.", stars: 4, text: "Booked same-day, super convenient." },
+      { id: "r6", user: "Yuna L.", stars: 5, text: "Stylist really listened to what I wanted." },
+    ],
+  },
+  "2": {
+    id: "2",
+    name: "Elite Hair Studio",
+    rating: 4.8,
+    reviewsCount: 127,
+    address: "123 Main St, New York, NY",
+    hours: "Open 10am - 7pm",
+    blurb: "Premium hair styling and grooming services",
+    img: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?q=80&w=1200&auto=format&fit=crop",
+    services: [
+      { id: "svc5", name: "Haircut", durationMin: 45, price: 50 },
+      { id: "svc6", name: "Shave", durationMin: 30, price: 25 },
+      { id: "svc7", name: "Beard Trim", durationMin: 20, price: 20 },
+    ],
+    gallery: GALLERY1,
+    reviews: [
+      { id: "r1", user: "Diego P.", stars: 5, text: "Top-tier studio and vibe." },
+      { id: "r2", user: "Mara C.", stars: 4, text: "Loved the style, thanks!" },
+    ],
+  },
+  "3": {
+    id: "3",
+    name: "Classic Barber Shop",
+    rating: 4.6,
+    reviewsCount: 89,
+    address: "456 Park Ave, New York, NY",
+    hours: "Open 9am - 6pm",
+    blurb: "Traditional barbering with modern style",
+    img: "https://images.unsplash.com/photo-1559599101-7d2c36f5fa42?q=80&w=1200&auto=format&fit=crop",
+    services: [
+      { id: "svc8", name: "Haircut", durationMin: 40, price: 35 },
+      { id: "svc9", name: "Hot Towel Shave", durationMin: 40, price: 40 },
+    ],
+    gallery: GALLERY1,
+    reviews: [
+      { id: "r1", user: "Tina W.", stars: 5, text: "My son's favorite barbershop." },
+    ],
+  },
+};
 
 export { distanceMiles };
