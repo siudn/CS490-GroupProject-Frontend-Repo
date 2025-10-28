@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getSalon, getSalonReviews } from "../api.js";
+import BookingWizardModal from "../widgets/BookingWizardModal.jsx";
 
 export default function SalonProfile() {
   const { id } = useParams();
   const [salon, setSalon] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openWizard, setOpenWizard] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -70,9 +72,16 @@ export default function SalonProfile() {
           ))}
         </div>
 
-        <button className="mt-6 w-full rounded-xl bg-black text-white py-3 font-medium hover:opacity-90">
-          Book Now
+        <button
+            onClick={() => setOpenWizard(true)}
+            className="mt-6 w-full rounded-xl bg-black text-white py-3 font-medium hover:opacity-90"
+        >
+            Book Now
         </button>
+
+        {openWizard && (
+            <BookingWizardModal salon={salon} onClose={() => setOpenWizard(false)} />
+        )}
       </div>
 
       <div className="bg-white border rounded-2xl p-5">

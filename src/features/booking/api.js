@@ -65,6 +65,21 @@ export async function getSalonReviews(id) {
   return api(`/salons/${id}/reviews?limit=6`);
 }
 
+export async function listEmployees(salonId) {
+  if (import.meta.env.VITE_MOCK === "1") return MOCK_EMPLOYEES_BY_SALON[salonId] ?? [];
+  return api(`/salons/${salonId}/employees`);
+}
+
+export async function listAvailability({ salonId, employeeId, dateISO }) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    // simple deterministic mock: some slots blocked/booked
+    const base = ["09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"];
+    const n = (new Date(dateISO).getDate() + Number(employeeId?.slice(-1))) % 3;
+    return base.map((t,i) => (i % 4 === n ? { time: t, status: "blocked"} : { time: t, status: i % 3 === n ? "booked" : "free"}));
+  }
+  return api(`/salons/${salonId}/employees/${employeeId}/availability?date=${dateISO}`);
+}
+
 /* ---------------- Helpers + Mock ---------------- */
 
 function distanceMiles(a, b) {
@@ -218,6 +233,20 @@ const MOCK_SALON_DETAILS = {
       { id: "r1", user: "Tina W.", stars: 5, text: "My son's favorite barbershop." },
     ],
   },
+};
+
+const MOCK_EMPLOYEES_BY_SALON = {
+  "1": [
+    { id: "emp1", name: "John Smith", title: "Master Stylist", avatar: "https://images.unsplash.com/photo-1547425260-76bcadfb4f2b?q=80&w=256&auto=format&fit=crop" },
+    { id: "emp2", name: "Sarah Johnson", title: "Color Expert", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=256&auto=format&fit=crop" },
+  ],
+  "2": [
+    { id: "emp3", name: "Aiden Lee", title: "Stylist", avatar: "https://images.unsplash.com/photo-1547425260-76bcadfb4f2b?q=80&w=256&auto=format&fit=crop" },
+  ],
+  "3": [
+    { id: "emp4", name: "Maria Gomez", title: "Barber", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=256&auto=format&fit=crop" },
+    { id: "emp5", name: "Ethan Park", title: "Senior Barber", avatar: "https://images.unsplash.com/photo-1547425260-76bcadfb4f2b?q=80&w=256&auto=format&fit=crop" },
+  ],
 };
 
 export { distanceMiles };
