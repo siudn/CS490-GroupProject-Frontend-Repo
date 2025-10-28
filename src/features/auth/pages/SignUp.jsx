@@ -22,7 +22,8 @@ export default function SignUp() {
   const accountTypes = [
     { value: "customer", label: "Customer" },
     { value: "owner", label: "Salon Owner" },
-    { value: "barber", label: "Barber" }
+    { value: "barber", label: "Barber" },
+    { value: "admin", label: "Admin" }
   ];
 
   const validateForm = () => {
@@ -84,12 +85,20 @@ export default function SignUp() {
       // In stub mode, simulate registration
       if (import.meta.env.VITE_AUTH_MODE === "stub") {
         await new Promise(resolve => setTimeout(resolve, 1000));
-        setSuccessMessage("Account created successfully! Redirecting to login...");
+        setSuccessMessage("Account created successfully! Redirecting...");
         
         // Auto-login after successful registration
         setTimeout(async () => {
           await login(formData.email, formData.password, formData.accountType);
-          navigate("/booking");
+          
+          // Role-based redirect
+          const redirectPaths = {
+            customer: "/booking",
+            owner: "/salon/register",
+            barber: "/schedule",
+            admin: "/salon/admin/verify"
+          };
+          navigate(redirectPaths[formData.accountType] || "/booking");
         }, 2000);
       } else {
         // Real API call would go here

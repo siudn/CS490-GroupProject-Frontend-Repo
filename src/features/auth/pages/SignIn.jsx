@@ -3,7 +3,7 @@ import { useAuth } from "../auth-provider.jsx";
 import { useNavigate } from "react-router-dom";
 
 export default function SignIn() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
@@ -46,12 +46,19 @@ export default function SignIn() {
     setErrors({});
     
     try {
-      await login(formData.email, formData.password);
+      const userData = await login(formData.email, formData.password);
       setSuccessMessage("Login successful! Redirecting...");
       
-      // Redirect based on user role (this will be handled by the auth provider)
+      // Role-based redirect
+      const redirectPaths = {
+        customer: "/booking",
+        owner: "/salon/register",
+        barber: "/schedule",
+        admin: "/salon/admin/verify"
+      };
+      
       setTimeout(() => {
-        navigate("/booking");
+        navigate(redirectPaths[userData.role] || "/booking");
       }, 1000);
     } catch (error) {
       setErrors({ submit: error.message || "Invalid email or password" });
@@ -79,10 +86,19 @@ export default function SignIn() {
   const demo = async (role) => {
     setIsLoading(true);
     try {
-      await login("demo@x.com", "", role);
+      const userData = await login("demo@x.com", "", role);
       setSuccessMessage(`Logged in as ${role}! Redirecting...`);
+      
+      // Role-based redirect
+      const redirectPaths = {
+        customer: "/booking",
+        owner: "/salon/register",
+        barber: "/schedule",
+        admin: "/salon/admin/verify"
+      };
+      
       setTimeout(() => {
-        navigate("/booking");
+        navigate(redirectPaths[userData.role] || "/booking");
       }, 1000);
     } catch (error) {
       setErrors({ submit: "Demo login failed" });
