@@ -16,6 +16,7 @@ function RealAuthProvider({ children }) {
     if (!res.ok) throw new Error("Login failed");
     const data = await res.json(); // expect { id, role, email }
     setUser(data);
+    return data; // Return user data for role-based redirects
   };
 
   const logout = async () => {
@@ -50,7 +51,9 @@ function StubAuthProvider({ children }) {
 
   const login = async (email, _pw, role = "customer") => {
     await new Promise((r) => setTimeout(r, 200));
-    setUser({ id: 1, role, email });
+    const userData = { id: 1, role, email };
+    setUser(userData);
+    return userData; // Return user data for role-based redirects
   };
   const logout = async () => setUser(null);
 
