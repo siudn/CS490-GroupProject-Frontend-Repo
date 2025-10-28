@@ -16,7 +16,8 @@ const timeSlots = [
 
 export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState("schedule");
-  const [selectedDate, setSelectedDate] = useState(new Date('2025-10-27'));
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [blockedSlots, setBlockedSlots] = useState([]);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState('');
@@ -32,9 +33,61 @@ export default function ProviderDashboard() {
   
   const handleDateClick = (dateNumber) => {
     if (dateNumber >= 1 && dateNumber <= 31 && !isNaN(dateNumber)) {
-      const newDate = new Date(2025, 9, dateNumber); // October is month 9
+      const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNumber);
       setSelectedDate(newDate);
     }
+  };
+
+  const handlePrevMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+  };
+
+  // Generate calendar dates
+  const getCalendarDates = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDay = firstDay.getDay(); // 0 = Sunday
+    const daysInMonth = lastDay.getDate();
+    
+    const days = [];
+    
+    // Previous month's trailing days
+    const prevMonth = new Date(year, month - 1, 0);
+    const prevMonthDays = prevMonth.getDate();
+    for (let i = startDay - 1; i >= 0; i--) {
+      days.push({
+        date: prevMonthDays - i,
+        month: -1,
+        isCurrentMonth: false
+      });
+    }
+    
+    // Current month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: i,
+        month: 0,
+        isCurrentMonth: true
+      });
+    }
+    
+    // Next month's leading days
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        date: i,
+        month: 1,
+        isCurrentMonth: false
+      });
+    }
+    
+    return days;
   };
 
   // Replace with database data later
@@ -241,13 +294,21 @@ export default function ProviderDashboard() {
               {/* Calendar */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full">
+                  <button 
+                    onClick={handlePrevMonth}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full"
+                  >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
-                  <h3 className="text-sm font-semibold text-gray-900">October 2025</h3>
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </h3>
+                  <button 
+                    onClick={handleNextMonth}
+                    className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full"
+                  >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
@@ -263,20 +324,33 @@ export default function ProviderDashboard() {
                 </div>
 
                 <div className="grid grid-cols-7" style={{gap: '2px'}}>
-                  {[28, 29, 30, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 1, 2, 3].map((date, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleDateClick(date)}
-                      style={{width: '100%', height: '32px'}}
-                      className={`flex items-center justify-center text-xs rounded bg-gray-100 border border-gray-300 ${
-                        date === selectedDate.getDate()
-                          ? 'bg-gray-900 text-white font-semibold'
-                          : 'hover:bg-gray-200 text-gray-600'
-                      } ${(date <= 26 || date > 31) ? 'text-gray-400' : ''}`}
-                    >
-                      {date}
-                    </button>
-                  ))}
+                  {getCalendarDates().map((day, idx) => {
+                    const isSelected = selectedDate.getDate() === day.date && 
+                                     selectedDate.getMonth() === currentMonth.getMonth() &&
+                                     selectedDate.getFullYear() === currentMonth.getFullYear();
+                    const isToday = day.isCurrentMonth && 
+                                   new Date().getDate() === day.date &&
+                                   new Date().getMonth() === currentMonth.getMonth() &&
+                                   new Date().getFullYear() === currentMonth.getFullYear();
+                    
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => day.isCurrentMonth && handleDateClick(day.date)}
+                        style={{width: '100%', height: '32px'}}
+                        className={`flex items-center justify-center text-xs rounded bg-gray-100 border border-gray-300 ${
+                          isSelected
+                            ? 'bg-gray-900 text-white font-semibold'
+                            : day.isCurrentMonth
+                            ? 'hover:bg-gray-200 text-gray-600'
+                            : 'text-gray-300 cursor-not-allowed'
+                        } ${isToday && !isSelected ? 'border-blue-500 border-2' : ''}`}
+                        disabled={!day.isCurrentMonth}
+                      >
+                        {day.date}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

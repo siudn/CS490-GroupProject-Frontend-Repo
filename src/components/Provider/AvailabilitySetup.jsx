@@ -10,6 +10,16 @@ const timeSlots = [
   "5:00 PM", "5:30 PM", "6:00 PM", "6:30 PM"
 ];
 
+// Helper function to convert 12-hour time to 24-hour format
+const convertTo24Hour = (time12h) => {
+  const [time, period] = time12h.split(' ');
+  let [hours, minutes] = time.split(':');
+  hours = parseInt(hours);
+  if (period === 'PM' && hours !== 12) hours += 12;
+  if (period === 'AM' && hours === 12) hours = 0;
+  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+};
+
 const schema = z.object({
   days: z.object({
     monday: z.object({ available: z.boolean(), start: z.string(), end: z.string() }),
@@ -44,7 +54,34 @@ export default function AvailabilitySetup() {
   });
 
   const onSubmit = (data) => {
-    console.log("Availability saved:", data);
+    // Convert form data to backend format
+    const dayMapping = {
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6
+    };
+
+    const availability = Object.entries(data.days).map(([dayName, dayData]) => ({
+      day_of_week: dayMapping[dayName],
+      start_time: dayData.available ? convertTo24Hour(dayData.start) : null,
+      end_time: dayData.available ? convertTo24Hour(dayData.end) : null,
+      is_active: dayData.available
+    }));
+
+    const payload = {
+      barber_id: "uuid-here", // This will be replaced with actual barber ID from auth
+      availability: availability
+    };
+
+    console.log("Sending to backend:", JSON.stringify(payload, null, 2));
+    
+    // In a real app, this would be:
+    // await api.post('/barbers/availability', payload);
+    
     alert("Availability saved successfully!");
   };
 
