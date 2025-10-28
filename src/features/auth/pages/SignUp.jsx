@@ -273,6 +273,28 @@ export default function SignUp() {
               )}
             </div>
 
+            {/* Confirm Password */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={`w-full px-4 py-3 border rounded-xl bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors ${
+                  errors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
+                placeholder="••••••••"
+              />
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              )}
+            </div>
+
             {/* Account Type */}
             <div>
               <label htmlFor="accountType" className="block text-sm font-medium text-gray-700 mb-2">
