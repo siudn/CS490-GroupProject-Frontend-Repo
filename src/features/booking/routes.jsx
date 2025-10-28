@@ -1,11 +1,12 @@
-// sample routes - write out your routes like this (replace the actual routes/elements with your pages)
 import { lazy } from "react";
-const BrowseServices = lazy(() => import("./pages/BrowseServices.jsx"));
-const BookingFlow = lazy(() => import("./pages/BookingFlow.jsx"));
-const BookingConfirm = lazy(() => import("./pages/BookingConfirm.jsx"));
+const SalonSearch = lazy(() => import("./pages/SalonSearch.jsx"));
+const SalonProfile = lazy(() => import("./pages/SalonProfile.jsx"));
+const Appointments = lazy(() => import("./pages/Appointments.jsx"));
+const VendorAppointments = lazy(() => import("./pages/VendorAppointments.jsx"));
 
 export default [
-  { path: "/booking", element: <BrowseServices /> },
-  { path: "/booking/new", element: <BookingFlow /> },
-  { path: "/booking/confirm", element: <BookingConfirm /> },
+  { path: "/booking", element: <SalonSearch /> },
+  { path: "/booking/salon/:id", element: <SalonProfile /> },
+  { path: "/account/appointments", element: <Appointments /> },
+  { path: "/vendor/appointments", element: <VendorAppointments /> },
 ];

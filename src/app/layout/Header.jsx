@@ -15,6 +15,7 @@ export default function Header() {
           <NavLink to="/auth/sign-up" className={linkClass}>Sign Up</NavLink>
           <NavLink to="/salon/register" className={linkClass}>Salon Register</NavLink>
           <NavLink to="/booking" className={linkClass}>Booking</NavLink>
+          <NavLink to="/account/appointments" className={linkClass}>My Appointments</NavLink>
           <NavLink to="/schedule" className={linkClass}>Schedule</NavLink>
         </nav>
       </div>
