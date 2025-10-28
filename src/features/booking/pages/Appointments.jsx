@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import {
   listUserAppointments,
   cancelAppointment as cancelApi, // not used directly—handled via modal
-  prepReschedule as prepApi,     // placeholder if you need it later
+  prepReschedule as prepApi,
 } from "../api.js";
 import AppointmentCard from "../components/AppointmentCard.jsx";
 import RescheduleModal from "../widgets/RescheduleModal.jsx";
@@ -18,7 +18,6 @@ export default function Appointments() {
   const [resAppt, setResAppt] = useState(null);
   const [cancelAppt, setCancelAppt] = useState(null);
 
-  // initial load
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -65,8 +64,6 @@ export default function Appointments() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <h1 className="text-2xl font-semibold">My Appointments</h1>
-
-      {/* Figma-style tab bar */}
       <div className="rounded-full bg-gray-100 p-1 w-full md:w-[560px]">
         <div className="grid grid-cols-2">
           <button
@@ -88,7 +85,6 @@ export default function Appointments() {
         </div>
       </div>
 
-      {/* Lists */}
       {tab === "upcoming" ? (
         upcoming.length === 0 ? (
           <div className="text-sm text-gray-600">No upcoming appointments.</div>
@@ -114,7 +110,6 @@ export default function Appointments() {
         </div>
       )}
 
-      {/* Modals */}
       {resAppt && (
         <RescheduleModal
           appt={resAppt}
