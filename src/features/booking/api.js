@@ -80,6 +80,19 @@ export async function listAvailability({ salonId, employeeId, dateISO }) {
   return api(`/salons/${salonId}/employees/${employeeId}/availability?date=${dateISO}`);
 }
 
+export async function listUserAppointments() {
+  if (import.meta.env.VITE_MOCK === "1") return MOCK_APPTS;
+  return api("/me/appointments"); // expected: { active:[], history:[] }
+}
+export async function cancelAppointment(id) {
+  if (import.meta.env.VITE_MOCK === "1") return { ok: true };
+  return api(`/appointments/${id}/cancel`, { method: "POST" });
+}
+export async function prepReschedule(id) {
+  if (import.meta.env.VITE_MOCK === "1") return { ok: true };
+  return api(`/appointments/${id}/reschedule`, { method: "GET" });
+}
+
 /* ---------------- Helpers + Mock ---------------- */
 
 function distanceMiles(a, b) {
@@ -246,6 +259,41 @@ const MOCK_EMPLOYEES_BY_SALON = {
   "3": [
     { id: "emp4", name: "Maria Gomez", title: "Barber", avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=256&auto=format&fit=crop" },
     { id: "emp5", name: "Ethan Park", title: "Senior Barber", avatar: "https://images.unsplash.com/photo-1547425260-76bcadfb4f2b?q=80&w=256&auto=format&fit=crop" },
+  ],
+};
+
+const MOCK_APPTS = {
+  active: [
+    {
+      id: "A-2001",
+      salon: { id: "1", name: "Elite Hair Studio", address: "123 Main St, New York, NY" },
+      employee: { id: "emp1", name: "John Smith" },
+      service: { id: "svc1", name: "Haircut", price: 45, durationMin: 40 },
+      whenISO: "2025-10-14T14:00:00Z",
+      status: "confirmed",
+      paymentStatus: "paid",
+    },
+  ],
+  history: [
+    {
+      id: "A-1999",
+      salon: { id: "1", name: "Elite Hair Studio", address: "123 Main St, New York, NY" },
+      employee: { id: "emp1", name: "John Smith" },
+      service: { id: "svc2", name: "Hair Coloring", price: 120, durationMin: 90 },
+      whenISO: "2025-10-07T11:00:00Z",
+      status: "completed",
+      paymentStatus: "paid",
+    },
+    {
+      id: "A-1998",
+      salon: { id: "1", name: "Elite Hair Studio", address: "123 Main St, New York, NY" },
+      employee: { id: "emp1", name: "John Smith" },
+      service: { id: "svc3", name: "Haircut", price: 45, durationMin: 45 },
+      whenISO: "2025-09-24T15:00:00Z",
+      status: "cancelled",
+      paymentStatus: "refunded",
+      cancellationReason: "Schedule conflict",
+    },
   ],
 };
 
