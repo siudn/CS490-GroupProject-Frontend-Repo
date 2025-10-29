@@ -163,12 +163,12 @@ export default function AdminAnalytics() {
               <CardTitle>User Activity Trends</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-end justify-around gap-2">
+              <div className="h-64 flex items-end justify-around gap-2 p-4">
                 {[65, 59, 80, 81, 56, 75, 88].map((height, i) => (
                   <div key={i} className="flex-1 flex flex-col items-center gap-2">
                     <div
-                      className="w-full bg-purple-600 rounded-t"
-                      style={{ height: `${height}%` }}
+                      className="w-full bg-purple-600 rounded-t min-h-[20px]"
+                      style={{ height: `${Math.max(height, 20)}%` }}
                     />
                     <span className="text-xs text-gray-500">
                       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
@@ -297,12 +297,12 @@ export default function AdminAnalytics() {
               <CardTitle>Peak Booking Hours</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-end justify-around gap-1">
+              <div className="h-64 flex items-end justify-around gap-1 p-4">
                 {[12, 15, 22, 45, 65, 88, 92, 85, 78, 68, 52, 38].map((height, i) => (
                   <div key={i} className="flex-1 flex flex-col items-center gap-2">
                     <div
-                      className="w-full bg-blue-600 rounded-t"
-                      style={{ height: `${height}%` }}
+                      className="w-full bg-blue-600 rounded-t min-h-[10px]"
+                      style={{ height: `${Math.max(height, 10)}%` }}
                     />
                     <span className="text-xs text-gray-500">{i + 9}:00</span>
                   </div>
