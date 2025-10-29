@@ -76,7 +76,13 @@ export default function CustomerInsights() {
           <CardDescription>View customer visit histories and provide personalized service</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {customers.map((customer) => (
+          {customers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No customer data available</p>
+              <p className="text-sm mt-2">Customer insights will appear here once you have salon customers.</p>
+            </div>
+          ) : (
+            customers.map((customer) => (
             <Card key={customer.id}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-4">
@@ -125,7 +131,8 @@ export default function CustomerInsights() {
                 )}
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
         </CardContent>
       </Card>
 
@@ -138,7 +145,13 @@ export default function CustomerInsights() {
           <CardDescription>Respond to customer reviews to manage your reputation</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {reviews.map((review) => (
+          {reviews.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <p>No reviews available</p>
+              <p className="text-sm mt-2">Customer reviews will appear here once customers start leaving feedback.</p>
+            </div>
+          ) : (
+            reviews.map((review) => (
             <Card key={review.id}>
               <CardContent className="p-4 space-y-3">
                 <div className="flex justify-between items-start">
@@ -190,7 +203,8 @@ export default function CustomerInsights() {
                 )}
               </CardContent>
             </Card>
-          ))}
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
