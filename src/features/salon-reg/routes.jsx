@@ -1,11 +1,14 @@
-// sample routes - write out your routes like this (replace the actual routes/elements with your pages)
 import { lazy } from "react";
 const SalonRegister = lazy(() => import("./pages/SalonRegister.jsx"));
-const PendingReview = lazy(() => import("./pages/PendingReview.jsx"));
 const AdminVerify = lazy(() => import("./pages/AdminVerify.jsx"));
+const CustomerInsights = lazy(() => import("./pages/CustomerInsights.jsx"));
+const PlatformMonitoring = lazy(() => import("./pages/PlatformMonitoring.jsx"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics.jsx"));
 
 export default [
   { path: "/salon/register", element: <SalonRegister /> },
-  { path: "/salon/pending", element: <PendingReview /> },
   { path: "/admin/verify", element: <AdminVerify /> },
+  { path: "/admin/customer-insights", element: <CustomerInsights /> },
+  { path: "/admin/platform-monitoring", element: <PlatformMonitoring /> },
+  { path: "/admin/analytics", element: <AdminAnalytics /> },
 ];
