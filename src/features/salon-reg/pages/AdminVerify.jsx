@@ -127,7 +127,7 @@ export default function AdminVerify() {
                 </Badge>
               )}
             </div>
-            <CardDescription className="mt-2 space-y-1">
+            <div className="mt-2 space-y-1">
               <div className="flex items-center gap-2">
                 <MapPin className="h-3 w-3" />
                 <span>{salon.address}</span>
@@ -136,7 +136,7 @@ export default function AdminVerify() {
                 <Phone className="h-3 w-3" />
                 <span>{salon.phone}</span>
               </div>
-            </CardDescription>
+            </div>
           </div>
         </div>
       </CardHeader>
