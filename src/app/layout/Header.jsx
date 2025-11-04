@@ -24,6 +24,7 @@ export default function Header() {
           <div className="text-lg font-extrabold text-indigo-600">Salonica</div>
           <nav className="flex gap-2">
             <NavLink to="/booking" className={linkClass}>Booking</NavLink>
+            <NavLink to="/account/appointments" className={linkClass}>My Appointments</NavLink>
             <NavLink to="/schedule" className={linkClass}>Schedule</NavLink>
             <NavLink to="/salon/register" className={linkClass}>Salon Register</NavLink>
           </nav>

@@ -16,6 +16,16 @@
    ```
    This keeps secrets or API URLs out of version control.
 
+### Mock Data Mode (for local development)
+
+If you want to use the mock booking data (no backend needed), add the following line to `.env.local`:
+
+```bash
+VITE_MOCK=1
+```
+
+This tells the app to use built-in mock API responses for booking, appointments, and vendor features instead of hitting real endpoints.
+
 ---
 
 ## 🚀 Overview
