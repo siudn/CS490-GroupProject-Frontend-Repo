@@ -107,6 +107,20 @@ export async function cancelAppointment(id, reason) {
   });
 }
 
+export async function submitReview(id, { stars, comment }) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    const appt = MOCK_APPTS.history.find((a) => a.id === id);
+    if (appt) {
+      appt.review = { stars, text: comment };
+    }
+    return { ok: true, review: appt?.review ?? { stars, text: comment } };
+  }
+  return api(`/appointments/${id}/review`, {
+    method: "POST",
+    body: JSON.stringify({ stars, comment }),
+  });
+}
+
 export async function listVendorRequests() {
   if (import.meta.env.VITE_MOCK === "1") return MOCK_VENDOR_REQUESTS;
   return api("/vendor/appointments"); // expected: { pending:[], upcoming:[], denied:[] }
@@ -318,6 +332,7 @@ const MOCK_APPTS = {
       whenISO: "2025-10-07T11:00:00Z",
       status: "completed",
       paymentStatus: "paid",
+      review: null,
     },
     {
       id: "A-1998",
@@ -328,6 +343,7 @@ const MOCK_APPTS = {
       status: "cancelled",
       paymentStatus: "refunded",
       cancellationReason: "Schedule conflict",
+      review: null,
     },
   ],
 };

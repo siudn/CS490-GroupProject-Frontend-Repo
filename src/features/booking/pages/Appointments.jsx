@@ -3,10 +3,12 @@ import {
   listUserAppointments,
   cancelAppointment as cancelApi, // not used directly—handled via modal
   prepReschedule as prepApi,
+  submitReview,
 } from "../api.js";
 import AppointmentCard from "../components/AppointmentCard.jsx";
 import RescheduleModal from "../widgets/RescheduleModal.jsx";
 import CancelModal from "../widgets/CancelModal.jsx";
+import PostAppointmentReview from "../components/PostAppointmentReview.jsx";
 
 export default function Appointments() {
   const [data, setData] = useState({ active: [], history: [] });
@@ -53,6 +55,28 @@ export default function Appointments() {
         history,
       };
     });
+  }
+
+  function applyReview(id, review) {
+    setData(({ active, history }) => ({
+      active,
+      history: history.map((appt) =>
+        appt.id === id ? { ...appt, review } : appt,
+      ),
+    }));
+  }
+
+  async function handleSubmitReview(id, payload) {
+    const clean = {
+      stars: payload.stars,
+      comment: payload.comment?.trim() ?? "",
+    };
+
+    const res = await submitReview(id, clean);
+    if (!res?.ok) {
+      throw new Error(res?.error || "Unable to submit review.");
+    }
+    applyReview(id, { stars: clean.stars, text: clean.comment });
   }
 
   if (loading) return <div className="max-w-6xl mx-auto p-6 text-gray-600">Loading…</div>;
@@ -105,7 +129,17 @@ export default function Appointments() {
       ) : (
         <div className="space-y-4">
           {past.map((a) => (
-            <AppointmentCard key={a.id} appt={a} compact />
+            <AppointmentCard key={a.id} appt={a} compact>
+              {a.status === "completed" ? (
+                <PostAppointmentReview
+                  appointmentId={a.id}
+                  existingReview={a.review}
+                  salonName={a.salon.name}
+                  employeeName={a.employee.name}
+                  onSubmit={handleSubmitReview}
+                />
+              ) : null}
+            </AppointmentCard>
           ))}
         </div>
       )}
