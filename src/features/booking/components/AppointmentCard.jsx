@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 
-export default function AppointmentCard({ appt, onCancel, onReschedule, compact = false }) {
+export default function AppointmentCard({
+  appt,
+  onCancel,
+  onReschedule,
+  compact = false,
+  children,
+}) {
   const d = new Date(appt.whenISO);
   return (
     <div className="rounded-2xl border bg-white p-5">
@@ -86,6 +92,7 @@ export default function AppointmentCard({ appt, onCancel, onReschedule, compact 
           )}
         </div>
       )}
+      {children ? <div className="mt-5">{children}</div> : null}
     </div>
   );
 }
