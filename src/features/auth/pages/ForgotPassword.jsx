@@ -42,7 +42,7 @@ export default function ForgotPassword() {
         }, 2000);
       } else {
         // Real API call
-        const response = await fetch(`${import.meta.env.VITE_API}/api/auth/password-reset/request`, {
+        const response = await fetch(`${import.meta.env.VITE_API}/auth/password-reset/request`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

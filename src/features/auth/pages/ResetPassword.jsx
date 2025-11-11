@@ -72,14 +72,14 @@ export default function ResetPassword() {
         }, 2000);
       } else {
         // Real API call
-        const response = await fetch(`${import.meta.env.VITE_API}/api/auth/password-reset/confirm`, {
+        const response = await fetch(`${import.meta.env.VITE_API}/auth/password-reset/confirm`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            token,
-            password: formData.password
+            access_token: token,
+            new_password: formData.password
           }),
         });
         
