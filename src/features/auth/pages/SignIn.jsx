@@ -15,6 +15,19 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Redirect if already logged in
+  if (user) {
+    const roleRedirects = {
+      customer: "/customer/browse",
+      owner: "/owner/dashboard",
+      barber: "/barber/schedule",
+      admin: "/admin/dashboard",
+    };
+    const destination = roleRedirects[user.role] || "/customer/browse";
+    navigate(destination, { replace: true });
+    return null;
+  }
+
   const validateForm = () => {
     const newErrors = {};
     
@@ -51,14 +64,14 @@ export default function SignIn() {
       
       // Role-based redirect
       const redirectPaths = {
-        customer: "/booking",
-        owner: "/salon/register",
-        barber: "/schedule",
-        admin: "/salon/admin/verify"
+        customer: "/customer/browse",
+        owner: "/owner/dashboard",
+        barber: "/barber/schedule",
+        admin: "/admin/dashboard"
       };
       
       setTimeout(() => {
-        navigate(redirectPaths[userData.role] || "/booking");
+        navigate(redirectPaths[userData.role] || "/customer/browse");
       }, 1000);
     } catch (error) {
       setErrors({ submit: error.message || "Invalid email or password" });
@@ -91,14 +104,14 @@ export default function SignIn() {
       
       // Role-based redirect
       const redirectPaths = {
-        customer: "/booking",
-        owner: "/salon/register",
-        barber: "/schedule",
-        admin: "/salon/admin/verify"
+        customer: "/customer/browse",
+        owner: "/owner/dashboard",
+        barber: "/barber/schedule",
+        admin: "/admin/dashboard"
       };
       
       setTimeout(() => {
-        navigate(redirectPaths[userData.role] || "/booking");
+        navigate(redirectPaths[userData.role] || "/customer/browse");
       }, 1000);
     } catch (error) {
       setErrors({ submit: "Demo login failed" });

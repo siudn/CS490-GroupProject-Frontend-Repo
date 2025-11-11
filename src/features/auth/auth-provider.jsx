@@ -60,11 +60,6 @@ function StubAuthProvider({ children }) {
   useEffect(() => {
     const role = new URLSearchParams(location.search).get("demo");
     if (role && !user) login("demo@example.com", "", role);
-    
-    // Auto-login for testing if no user and no demo param
-    if (!user && !role) {
-      login("demo@example.com", "", "admin");
-    }
   }, []);
 
   return (
