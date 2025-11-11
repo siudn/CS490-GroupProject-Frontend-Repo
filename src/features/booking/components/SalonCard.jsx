@@ -1,6 +1,17 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../../auth/auth-provider.jsx";
 
 export default function SalonCard({ salon, userCoords }) {
+  const { user } = useAuth();
+  const rolePaths = {
+    customer: "/customer/salon",
+    owner: "/owner/salon",
+    barber: "/barber/salon",
+    admin: "/admin/salon",
+  };
+  const basePath = user ? rolePaths[user.role] || "/customer/salon" : "/customer/salon";
+  const linkTarget = `${basePath}/${salon.id}`;
+
   const distance =
     salon.distMiles != null
       ? salon.distMiles
@@ -9,7 +20,7 @@ export default function SalonCard({ salon, userCoords }) {
       : null;
 
   return (
-    <Link to={`/booking/salon/${salon.id}`} className="bg-white rounded-xl border overflow-hidden shadow-sm block hover:shadow-md transition">
+    <Link to={linkTarget} className="bg-white rounded-xl border overflow-hidden shadow-sm block hover:shadow-md transition">
       <img src={salon.img} alt={salon.name} className="h-44 w-full object-cover" />
       <div className="p-4 space-y-2">
         <div className="font-semibold">{salon.name}</div>

@@ -69,7 +69,7 @@ export default function AppointmentCard({
       {!compact && appt.status !== "cancelled" && (
         <div className="mt-4 flex gap-3">
           <Link
-            to={`/booking/salon/${appt.salon.id}`}
+            to={`/customer/salon/${appt.salon.id}`}
             className="rounded-xl border px-3 py-2 hover:bg-gray-50"
           >
             View Salon

@@ -1,18 +1,72 @@
-import { useState } from "react";
-import { CalendarIcon, Clock, User as UserIcon, CheckCircle, AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  CalendarIcon,
+  Clock,
+  User as UserIcon,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+import { fetchAppointments, patchAppointment } from "../api.js";
 
 const timeSlots = [
-  '9:00 AM',
-  '10:00 AM',
-  '11:00 AM',
-  '12:00 PM',
-  '1:00 PM',
-  '2:00 PM',
-  '3:00 PM',
-  '4:00 PM',
-  '5:00 PM',
-  '6:00 PM',
+  "9:00 AM",
+  "10:00 AM",
+  "11:00 AM",
+  "12:00 PM",
+  "1:00 PM",
+  "2:00 PM",
+  "3:00 PM",
+  "4:00 PM",
+  "5:00 PM",
+  "6:00 PM",
 ];
+
+const toDisplayTime = (time24) => {
+  if (!time24) return "12:00 PM";
+  const [hourStr, minuteStr] = time24.split(":");
+  let hour = Number.parseInt(hourStr, 10);
+  if (Number.isNaN(hour)) return time24;
+  const minute = minuteStr ?? "00";
+  const period = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
+  return `${hour}:${minute.slice(0, 2)} ${period}`;
+};
+
+const to24Hour = (time12) => {
+  const [time, period] = time12.split(" ");
+  if (!time || !period) return "00:00:00";
+  let [hours, minutes] = time.split(":");
+  let hourInt = Number.parseInt(hours, 10);
+  if (Number.isNaN(hourInt)) hourInt = 0;
+  if (period === "PM" && hourInt !== 12) hourInt += 12;
+  if (period === "AM" && hourInt === 12) hourInt = 0;
+  return `${hourInt.toString().padStart(2, "0")}:${(minutes ?? "00").padEnd(
+    2,
+    "0"
+  )}:00`;
+};
+
+const normalizeAppointment = (raw) => {
+  const appointmentDate = raw?.appointment_date ?? raw?.date ?? "";
+  const startTime = raw?.start_time ?? raw?.time ?? "";
+  const price =
+    Number.parseFloat(raw?.price) ||
+    Number.parseFloat(raw?.total_price) ||
+    Number.parseFloat(raw?.service?.price) ||
+    0;
+
+  return {
+    ...raw,
+    id: raw?.id ?? raw?.appointment_id ?? `${appointmentDate}-${startTime}`,
+    appointment_date: appointmentDate,
+    start_time: startTime,
+    end_time: raw?.end_time ?? null,
+    displayTime: toDisplayTime(startTime),
+    status: raw?.status ?? "scheduled",
+    notes: raw?.notes ?? "",
+    price,
+  };
+};
 
 export default function ProviderDashboard() {
   const [activeTab, setActiveTab] = useState("schedule");
@@ -20,97 +74,132 @@ export default function ProviderDashboard() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [blockedSlots, setBlockedSlots] = useState([]);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState("");
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [editFormData, setEditFormData] = useState({
-    time: '',
-    notes: '',
-    status: 'confirmed'
+    time: "",
+    notes: "",
+    status: "scheduled",
   });
   const [conflictError, setConflictError] = useState(null);
-  
+  const [appointments, setAppointments] = useState([]);
+  const [appointmentsError, setAppointmentsError] = useState(null);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const handleDateClick = (dateNumber) => {
-    if (dateNumber >= 1 && dateNumber <= 31 && !isNaN(dateNumber)) {
-      const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), dateNumber);
+    if (dateNumber >= 1 && dateNumber <= 31 && !Number.isNaN(dateNumber)) {
+      const newDate = new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth(),
+        dateNumber
+      );
       setSelectedDate(newDate);
     }
   };
 
   const handlePrevMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+    );
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+    );
   };
 
-  // Generate calendar dates
+  const loadAppointments = useCallback(async () => {
+    setLoadingAppointments(true);
+    setAppointmentsError(null);
+    try {
+      const response = await fetchAppointments();
+      const rows = Array.isArray(response?.appointments)
+        ? response.appointments
+        : Array.isArray(response)
+        ? response
+        : [];
+      setAppointments(rows.map(normalizeAppointment));
+    } catch (err) {
+      setAppointmentsError(
+        err instanceof Error
+          ? err.message
+          : "Failed to load appointments for this barber."
+      );
+    } finally {
+      setLoadingAppointments(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAppointments();
+  }, [loadAppointments]);
+
   const getCalendarDates = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const startDay = firstDay.getDay(); // 0 = Sunday
+    const startDay = firstDay.getDay();
     const daysInMonth = lastDay.getDate();
-    
+
     const days = [];
-    
-    // Previous month's trailing days
+
     const prevMonth = new Date(year, month - 1, 0);
     const prevMonthDays = prevMonth.getDate();
-    for (let i = startDay - 1; i >= 0; i--) {
+    for (let i = startDay - 1; i >= 0; i -= 1) {
       days.push({
         date: prevMonthDays - i,
         month: -1,
-        isCurrentMonth: false
+        isCurrentMonth: false,
       });
     }
-    
-    // Current month
-    for (let i = 1; i <= daysInMonth; i++) {
+
+    for (let i = 1; i <= daysInMonth; i += 1) {
       days.push({
         date: i,
         month: 0,
-        isCurrentMonth: true
+        isCurrentMonth: true,
       });
     }
-    
-    // Next month's leading days
+
     const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
+    for (let i = 1; i <= remainingDays; i += 1) {
       days.push({
         date: i,
         month: 1,
-        isCurrentMonth: false
+        isCurrentMonth: false,
       });
     }
-    
+
     return days;
   };
 
-  // Replace with database data later
-  const appointments = [];
-
-  const todayAppointments = appointments.filter(
-    (a) => a.date === selectedDate.toISOString().split('T')[0]
+  const selectedDateISO = useMemo(
+    () => selectedDate.toISOString().split("T")[0],
+    [selectedDate]
   );
 
-  // Group appointments by date for the list view
+  const todayAppointments = appointments.filter(
+    (a) => a.appointment_date === selectedDateISO
+  );
+
   const appointmentsByDate = appointments.reduce((acc, apt) => {
-    if (!acc[apt.date]) {
-      acc[apt.date] = [];
+    if (!apt.appointment_date) return acc;
+    if (!acc[apt.appointment_date]) {
+      acc[apt.appointment_date] = [];
     }
-    acc[apt.date].push(apt);
+    acc[apt.appointment_date].push(apt);
     return acc;
   }, {});
 
-  const sortedDates = Object.keys(appointmentsByDate).sort((a, b) => 
-    new Date(b) - new Date(a)
+  const sortedDates = Object.keys(appointmentsByDate).sort(
+    (a, b) => new Date(b) - new Date(a)
   );
 
-  // Check if an appointment date is in the past
   const isPastDate = (dateString) => {
     const appointmentDate = new Date(dateString);
     const today = new Date();
@@ -120,36 +209,41 @@ export default function ProviderDashboard() {
   };
 
   const getSlotStatus = (time) => {
-    const hasAppointment = todayAppointments.find((a) => a.time === time);
+    const hasAppointment = todayAppointments.find(
+      (a) => a.displayTime === time
+    );
     const isBlocked = blockedSlots.includes(time);
 
-    if (hasAppointment) return 'booked';
-    if (isBlocked) return 'blocked';
-    return 'available';
+    if (hasAppointment) return "booked";
+    if (isBlocked) return "blocked";
+    return "available";
   };
 
   const handleBlockSlot = () => {
-    if (selectedSlot) {
-      // Check for conflicts
-      const hasExistingAppointment = todayAppointments.find((a) => a.time === selectedSlot);
-      
-      if (hasExistingAppointment) {
-        setConflictError(`Cannot block ${selectedSlot} - Appointment already scheduled at this time`);
-        setTimeout(() => setConflictError(null), 5000);
-        return;
-      }
-      
-      setBlockedSlots([...blockedSlots, selectedSlot]);
-      setShowBlockDialog(false);
-      setSelectedSlot('');
-      setConflictError(null);
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
+    if (!selectedSlot) return;
+
+    const hasExistingAppointment = todayAppointments.find(
+      (a) => a.displayTime === selectedSlot
+    );
+
+    if (hasExistingAppointment) {
+      setConflictError(
+        `Cannot block ${selectedSlot} - Appointment already scheduled at this time`
+      );
+      setTimeout(() => setConflictError(null), 5000);
+      return;
     }
+
+    setBlockedSlots((prev) => [...prev, selectedSlot]);
+    setShowBlockDialog(false);
+    setSelectedSlot("");
+    setConflictError(null);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 3000);
   };
 
   const handleUnblockSlot = (time) => {
-    setBlockedSlots(blockedSlots.filter((slot) => slot !== time));
+    setBlockedSlots((prev) => prev.filter((slot) => slot !== time));
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
@@ -157,39 +251,62 @@ export default function ProviderDashboard() {
   const handleEditAppointment = (appointment) => {
     setEditingAppointment(appointment);
     setEditFormData({
-      time: appointment.time,
-      notes: appointment.notes || '',
-      status: appointment.status
+      time: appointment.displayTime ?? "9:00 AM",
+      notes: appointment.notes ?? "",
+      status: appointment.status ?? "scheduled",
     });
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = () => {
-    // Check for scheduling conflicts
+  const handleSaveEdit = async () => {
+    if (!editingAppointment) return;
+
     const conflictingTime = editFormData.time;
     const hasConflict = todayAppointments.some(
-      (a) => a.time === conflictingTime && a.id !== editingAppointment?.id
+      (a) =>
+        a.displayTime === conflictingTime && a.id !== editingAppointment?.id
     );
     const isBlocked = blockedSlots.includes(conflictingTime);
-    
+
     if (hasConflict) {
-      setConflictError(`Cannot schedule at ${conflictingTime} - Time slot is already booked`);
+      setConflictError(
+        `Cannot schedule at ${conflictingTime} - Time slot is already booked`
+      );
       setTimeout(() => setConflictError(null), 5000);
       return;
     }
-    
+
     if (isBlocked) {
-      setConflictError(`Cannot schedule at ${conflictingTime} - Time slot is blocked`);
+      setConflictError(
+        `Cannot schedule at ${conflictingTime} - Time slot is blocked`
+      );
       setTimeout(() => setConflictError(null), 5000);
       return;
     }
-    
-    // In a real app, this would call an API
-    console.log('Saving appointment:', editingAppointment, editFormData);
-    setShowEditModal(false);
-    setConflictError(null);
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+
+    try {
+      setSavingEdit(true);
+      await patchAppointment({
+        id: editingAppointment.id,
+        start_time: to24Hour(editFormData.time),
+        notes: editFormData.notes || undefined,
+        status: editFormData.status,
+      });
+      setShowEditModal(false);
+      setEditingAppointment(null);
+      await loadAppointments();
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (err) {
+      setConflictError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update appointment via backend PATCH /api/appointments."
+      );
+      setTimeout(() => setConflictError(null), 5000);
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const handleCloseEditModal = () => {
@@ -199,7 +316,6 @@ export default function ProviderDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Success Alert */}
       {savedSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-2">
           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -207,7 +323,6 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* Conflict Error Alert */}
       {conflictError && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 text-red-600" />
@@ -215,7 +330,12 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* Tabs */}
+      {appointmentsError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+          {appointmentsError}
+        </div>
+      )}
+
       <div className="mb-6">
         <nav className="flex p-1 bg-gray-200 rounded-full w-full">
           <button
@@ -243,15 +363,16 @@ export default function ProviderDashboard() {
 
       {activeTab === "schedule" && (
         <>
-          {/* Summary Cards */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
               <div className="flex flex-col">
                 <div className="flex items-center gap-3 mb-4">
                   <CalendarIcon className="w-5 h-5 text-gray-600" />
-                  <p className="text-sm text-gray-600">Today's Appointments</p>
+                  <p className="text-sm text-gray-600">Today&apos;s Appointments</p>
                 </div>
-                <p className="text-3xl font-bold text-gray-900">{todayAppointments.length}</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {todayAppointments.length}
+                </p>
               </div>
             </div>
 
@@ -261,7 +382,9 @@ export default function ProviderDashboard() {
                   <Clock className="w-5 h-5 text-gray-600" />
                   <p className="text-sm text-gray-600">Hours Booked</p>
                 </div>
-                <p className="text-3xl font-bold text-gray-900">{todayAppointments.length * 0.75}h</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {(todayAppointments.length * 0.75).toFixed(1)}h
+                </p>
                 <p className="text-xs text-gray-500 mt-1">~45 min per appointment</p>
               </div>
             </div>
@@ -273,78 +396,109 @@ export default function ProviderDashboard() {
                   <p className="text-sm text-gray-600">Expected Revenue</p>
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  ${todayAppointments.reduce((sum, a) => sum + a.price, 0)}
+                  $
+                  {todayAppointments
+                    .reduce((sum, a) => sum + (a.price ?? 0), 0)
+                    .toFixed(2)}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Daily Schedule */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                Daily Schedule
-              </h2>
-              <p className="text-gray-600">
-                View and manage your appointments
-              </p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">Daily Schedule</h2>
+              <p className="text-gray-600">View and manage your appointments</p>
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-              {/* Calendar */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <button 
+                  <button
                     onClick={handlePrevMonth}
                     className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
                     </svg>
                   </button>
                   <h3 className="text-sm font-semibold text-gray-900">
-                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    {currentMonth.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    })}
                   </h3>
-                  <button 
+                  <button
                     onClick={handleNextMonth}
                     className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
                     </svg>
                   </button>
                 </div>
 
                 <div className="grid grid-cols-7 gap-0 mb-1">
-                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                    <div key={day} className="text-center text-xs font-medium text-gray-600 py-1">
+                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-xs font-medium text-gray-600 py-1"
+                    >
                       {day}
                     </div>
                   ))}
                 </div>
 
-                <div className="grid grid-cols-7" style={{gap: '2px'}}>
+                <div className="grid grid-cols-7" style={{ gap: "2px" }}>
                   {getCalendarDates().map((day, idx) => {
-                    const isSelected = selectedDate.getDate() === day.date && 
-                                     selectedDate.getMonth() === currentMonth.getMonth() &&
-                                     selectedDate.getFullYear() === currentMonth.getFullYear();
-                    const isToday = day.isCurrentMonth && 
-                                   new Date().getDate() === day.date &&
-                                   new Date().getMonth() === currentMonth.getMonth() &&
-                                   new Date().getFullYear() === currentMonth.getFullYear();
-                    
+                    const isSelected =
+                      day.isCurrentMonth &&
+                      selectedDate.getDate() === day.date &&
+                      selectedDate.getMonth() === currentMonth.getMonth() &&
+                      selectedDate.getFullYear() === currentMonth.getFullYear();
+                    const now = new Date();
+                    const isToday =
+                      day.isCurrentMonth &&
+                      now.getDate() === day.date &&
+                      now.getMonth() === currentMonth.getMonth() &&
+                      now.getFullYear() === currentMonth.getFullYear();
+
                     return (
                       <button
                         key={idx}
-                        onClick={() => day.isCurrentMonth && handleDateClick(day.date)}
-                        style={{width: '100%', height: '32px'}}
+                        onClick={() =>
+                          day.isCurrentMonth && handleDateClick(day.date)
+                        }
+                        style={{ width: "100%", height: "32px" }}
                         className={`flex items-center justify-center text-xs rounded bg-gray-100 border border-gray-300 ${
                           isSelected
-                            ? 'bg-gray-900 text-white font-semibold'
+                            ? "bg-gray-900 text-white font-semibold"
                             : day.isCurrentMonth
-                            ? 'hover:bg-gray-200 text-gray-600'
-                            : 'text-gray-300 cursor-not-allowed'
-                        } ${isToday && !isSelected ? 'border-blue-500 border-2' : ''}`}
+                            ? "hover:bg-gray-200 text-gray-600"
+                            : "text-gray-300 cursor-not-allowed"
+                        } ${
+                          isToday && !isSelected ? "border-blue-500 border-2" : ""
+                        }`}
                         disabled={!day.isCurrentMonth}
                       >
                         {day.date}
@@ -354,17 +508,16 @@ export default function ProviderDashboard() {
                 </div>
               </div>
 
-              {/* Time Slots */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
                     {selectedDate.toLocaleDateString(undefined, {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric',
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
                     })}
                   </h3>
-                  <button 
+                  <button
                     onClick={() => setShowBlockDialog(true)}
                     className="px-4 py-2 bg-gray-100 border border-gray-300 text-gray-900 rounded-md hover:bg-gray-200 text-sm font-medium"
                   >
@@ -372,30 +525,42 @@ export default function ProviderDashboard() {
                   </button>
                 </div>
 
-                <div style={{gap: '20px', display: 'flex', flexDirection: 'column'}} className="max-h-96 overflow-y-auto">
+                <div
+                  className="max-h-96 overflow-y-auto flex flex-col"
+                  style={{ gap: "20px" }}
+                >
                   {timeSlots.map((time) => {
                     const status = getSlotStatus(time);
-                    const appointment = todayAppointments.find((a) => a.time === time);
+                    const appointment = todayAppointments.find(
+                      (a) => a.displayTime === time
+                    );
 
                     return (
                       <div
                         key={time}
-                        style={{paddingTop: '12px', paddingBottom: '12px', paddingLeft: '20px', paddingRight: '20px'}}
+                        style={{
+                          paddingTop: "12px",
+                          paddingBottom: "12px",
+                          paddingLeft: "20px",
+                          paddingRight: "20px",
+                        }}
                         className={`rounded-lg border border-gray-200 ${
-                          status === 'booked'
-                            ? 'bg-blue-50 border-blue-200'
-                            : status === 'blocked'
-                            ? 'bg-gray-100 border-gray-300'
-                            : 'bg-white border-gray-200'
+                          status === "booked"
+                            ? "bg-blue-50 border-blue-200"
+                            : status === "blocked"
+                            ? "bg-gray-100 border-gray-300"
+                            : "bg-white border-gray-200"
                         }`}
                       >
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-3">
                             <Clock className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium text-gray-700">{time}</span>
+                            <span className="font-medium text-gray-700">
+                              {time}
+                            </span>
                           </div>
 
-                          {status === 'booked' && appointment && (
+                          {status === "booked" && appointment && (
                             <div className="flex items-center gap-2">
                               <span className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded text-xs font-medium">
                                 Booked
@@ -404,9 +569,11 @@ export default function ProviderDashboard() {
                             </div>
                           )}
 
-                          {status === 'blocked' && (
+                          {status === "blocked" && (
                             <div className="flex items-center gap-3">
-                              <span className="text-sm text-gray-700 font-medium">Blocked</span>
+                              <span className="text-sm text-gray-700 font-medium">
+                                Blocked
+                              </span>
                               <button
                                 onClick={() => handleUnblockSlot(time)}
                                 className="px-3 py-1.5 bg-gray-200 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-300"
@@ -416,7 +583,7 @@ export default function ProviderDashboard() {
                             </div>
                           )}
 
-                          {status === 'available' && (
+                          {status === "available" && (
                             <button className="px-3 py-1.5 bg-gray-200 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-300">
                               Available
                             </button>
@@ -430,7 +597,6 @@ export default function ProviderDashboard() {
             </div>
           </div>
 
-          {/* Appointment List View */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <div className="mb-4">
               <h2 className="text-xl font-bold text-gray-900 mb-1">
@@ -441,7 +607,9 @@ export default function ProviderDashboard() {
               </p>
             </div>
 
-            {sortedDates.length === 0 ? (
+            {loadingAppointments ? (
+              <div className="text-sm text-gray-500">Loading appointments…</div>
+            ) : sortedDates.length === 0 ? (
               <div className="text-center py-12">
                 <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600">No appointments scheduled</p>
@@ -451,64 +619,78 @@ export default function ProviderDashboard() {
                 {sortedDates.map((date) => {
                   const dateAppointments = appointmentsByDate[date];
                   const dateObj = new Date(date);
-                  const isPast = isPastDate(date);
-                  
+                  const past = isPastDate(date);
+
                   return (
-                    <div key={date} className="border-b border-gray-200 pb-6 last:border-b-0">
-                      {/* Date Header */}
+                    <div
+                      key={date}
+                      className="border-b border-gray-200 pb-6 last:border-b-0"
+                    >
                       <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {dateObj.toLocaleDateString('en-US', { 
-                          weekday: 'long', 
-                          month: 'long', 
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                        {isPast && (
-                          <span className="ml-2 text-sm text-gray-500">(Past)</span>
-                        )}
-                      </h3>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {dateObj.toLocaleDateString("en-US", {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                          {past && (
+                            <span className="ml-2 text-sm text-gray-500">
+                              (Past)
+                            </span>
+                          )}
+                        </h3>
                         <p className="text-sm text-gray-600">
-                          {dateAppointments.length} appointment{dateAppointments.length !== 1 ? 's' : ''}
+                          {dateAppointments.length} appointment
+                          {dateAppointments.length !== 1 ? "s" : ""}
                         </p>
                       </div>
 
-                      {/* Appointments for this date */}
                       <div className="space-y-3">
                         {dateAppointments
-                          .sort((a, b) => a.time.localeCompare(b.time))
+                          .slice()
+                          .sort((a, b) => a.displayTime.localeCompare(b.displayTime))
                           .map((appointment) => (
-                            <div 
-                              key={appointment.id} 
+                            <div
+                              key={appointment.id}
                               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
                             >
                               <div className="flex items-center gap-4">
                                 <div className="flex items-center gap-2 text-gray-600">
                                   <Clock className="h-4 w-4" />
-                                  <span className="font-medium">{appointment.time}</span>
+                                  <span className="font-medium">
+                                    {appointment.displayTime}
+                                  </span>
                                 </div>
                                 <div>
-                                  <p className="font-medium text-gray-900">Customer Name</p>
-                                  <p className="text-sm text-gray-600">Service: Haircut</p>
+                                  <p className="font-medium text-gray-900">
+                                    Customer
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    Barber-side details unavailable
+                                  </p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="px-3 py-1 bg-gray-800 text-white rounded text-sm font-medium">
-                                  ${appointment.price}
+                                  ${appointment.price.toFixed(2)}
                                 </span>
-                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
-                                  {appointment.status}
+                                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium capitalize">
+                                  {appointment.status.replace("_", " ")}
                                 </span>
-                                {!isPast && (
+                                {!past && (
                                   <button
                                     onClick={() => handleEditAppointment(appointment)}
-                                    className="px-3 py-1.5 bg-gray-200 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-300"
+                                    className="px-3 py-1.5 bg-gray-200 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+                                    disabled={savingEdit}
                                   >
                                     Edit
                                   </button>
                                 )}
-                                {isPast && (
-                                  <span className="text-xs text-gray-500">Completed</span>
+                                {past && (
+                                  <span className="text-xs text-gray-500">
+                                    Completed
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -529,7 +711,6 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* Block Time Dialog */}
       {showBlockDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
@@ -539,15 +720,15 @@ export default function ProviderDashboard() {
             </p>
             <div className="space-y-2 mb-4">
               {timeSlots
-                .filter((time) => getSlotStatus(time) === 'available')
+                .filter((time) => getSlotStatus(time) === "available")
                 .map((time) => (
                   <button
                     key={time}
                     onClick={() => setSelectedSlot(time)}
                     className={`w-full px-4 py-2 rounded-md ${
                       selectedSlot === time
-                        ? 'bg-gray-900 text-white'
-                        : 'border border-gray-300 hover:bg-gray-50'
+                        ? "bg-gray-900 text-white"
+                        : "border border-gray-300 hover:bg-gray-50"
                     }`}
                   >
                     {time}
@@ -558,7 +739,7 @@ export default function ProviderDashboard() {
               <button
                 onClick={() => {
                   setShowBlockDialog(false);
-                  setSelectedSlot('');
+                  setSelectedSlot("");
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
               >
@@ -567,7 +748,7 @@ export default function ProviderDashboard() {
               <button
                 onClick={handleBlockSlot}
                 disabled={!selectedSlot}
-                className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-300"
+                className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 Block Slot
               </button>
@@ -576,59 +757,61 @@ export default function ProviderDashboard() {
         </div>
       )}
 
-      {/* Edit Appointment Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <div className="mb-4">
               <h3 className="text-lg font-semibold mb-1">Edit Appointment</h3>
-              <p className="text-sm text-gray-600">
-                Update appointment details
-              </p>
+              <p className="text-sm text-gray-600">Update appointment details</p>
             </div>
 
             <div className="space-y-4">
-              {/* Time Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Time
                 </label>
                 <select
                   value={editFormData.time}
-                  onChange={(e) => setEditFormData({...editFormData, time: e.target.value})}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, time: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  {timeSlots.map(time => (
-                    <option key={time} value={time}>{time}</option>
+                  {timeSlots.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {/* Status Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Status
                 </label>
                 <select
                   value={editFormData.status}
-                  onChange={(e) => setEditFormData({...editFormData, status: e.target.value})}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, status: e.target.value })
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="confirmed">Confirmed</option>
+                  <option value="scheduled">Scheduled</option>
                   <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="canceled">Canceled</option>
+                  <option value="no_show">No Show</option>
                 </select>
               </div>
 
-              {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Notes (Optional)
                 </label>
                 <textarea
                   value={editFormData.notes}
-                  onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, notes: e.target.value })
+                  }
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="Add any notes about this appointment..."
@@ -645,16 +828,16 @@ export default function ProviderDashboard() {
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
+                disabled={savingEdit}
+                className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Save Changes
+                {savingEdit ? "Saving…" : "Save Changes"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Floating Help Button */}
       <button className="fixed bottom-6 right-6 w-12 h-12 bg-gray-900 text-white rounded-full shadow-lg hover:bg-gray-800 flex items-center justify-center">
         ?
       </button>
