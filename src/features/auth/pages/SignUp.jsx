@@ -102,18 +102,18 @@ export default function SignUp() {
         }, 2000);
       } else {
         // Real API call would go here
-        const response = await fetch(`${import.meta.env.VITE_API}/api/auth/signup`, {
+        const response = await fetch(`${import.meta.env.VITE_API}/auth/signup`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           credentials: "include",
           body: JSON.stringify({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
+            first_name: formData.firstName,
+            last_name: formData.lastName,
             email: formData.email,
             password: formData.password,
-            accountType: formData.accountType
+            role: formData.accountType === "owner" ? "salon_owner" : formData.accountType
           }),
         });
         
