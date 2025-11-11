@@ -13,27 +13,27 @@ const SalonRegister = lazy(() => import("../salon-reg/pages/SalonRegister.jsx"))
 export default [
   { 
     path: "/owner/dashboard", 
-    element: <RoleGate allow={["owner"]}><OwnerDashboard /></RoleGate> 
+    element: <RoleGate allow={["owner", "salon_owner"]}><OwnerDashboard /></RoleGate> 
   },
   { 
     path: "/owner/register", 
-    element: <RoleGate allow={["owner"]}><SalonRegister /></RoleGate> 
+    element: <RoleGate allow={["owner", "salon_owner"]}><SalonRegister /></RoleGate> 
   },
   { 
     path: "/owner/customers", 
-    element: <RoleGate allow={["owner"]}><Customers /></RoleGate> 
+    element: <RoleGate allow={["owner", "salon_owner"]}><Customers /></RoleGate> 
   },
   { 
     path: "/owner/loyalty", 
-    element: <RoleGate allow={["owner"]}><LoyaltyProgram /></RoleGate> 
+    element: <RoleGate allow={["owner", "salon_owner"]}><LoyaltyProgram /></RoleGate> 
   },
   { 
     path: "/owner/shop", 
-    element: <RoleGate allow={["owner"]}><MyShop /></RoleGate> 
+    element: <RoleGate allow={["owner", "salon_owner"]}><MyShop /></RoleGate> 
   },
   { 
     path: "/owner/payments", 
-    element: <RoleGate allow={["owner"]}><Payments /></RoleGate> 
+    element: <RoleGate allow={["owner", "salon_owner"]}><Payments /></RoleGate> 
   },
 ];
 

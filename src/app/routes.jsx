@@ -6,9 +6,10 @@ import barberRoutes from "../features/barber/routes.jsx";
 import adminRoutes from "../features/admin/routes.jsx";
 import NotFound from "./NotFound.jsx";
 import { RoleBasedRedirect } from "../shared/routing/RoleBasedRedirect.jsx";
+import Home from "../pages/Home.jsx";
 
 export default [
-    { index: true, element: <RoleBasedRedirect /> },
+    { index: true, element: <Home /> },
     ...authRoutes,
     ...customerRoutes,
     ...ownerRoutes,
