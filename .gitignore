@@ -10,3 +10,6 @@ build/
 .vscode/
 .idea/
 
+# Backend repository (for analysis only, not to be committed)
+backendtemp/
+
