@@ -126,7 +126,7 @@ export default function Loyalty() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Rewards</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {rewards.map((reward) => {
-            const canRedeem = pointsBalance >= reward.pointsRequired;
+            const canRedeem = balance >= reward.pointsRequired;
             return (
               <div
                 key={reward.id}
