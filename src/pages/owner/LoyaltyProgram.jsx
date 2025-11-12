@@ -1,10 +1,160 @@
+import { useState } from "react";
+import { Button } from "../../shared/ui/button";
+import { Input } from "../../shared/ui/input";
+
 export default function LoyaltyProgram() {
+  // Mock data - will be replaced with API calls in Phase 5
+  const [pointsPerDollar, setPointsPerDollar] = useState(1);
+  const [rewards, setRewards] = useState([
+    { id: 1, pointsRequired: 100, discountAmount: 5, discountType: "dollar" },
+    { id: 2, pointsRequired: 200, discountAmount: 10, discountType: "dollar" },
+    { id: 3, pointsRequired: 300, discountAmount: 15, discountType: "dollar" },
+  ]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handlePointsPerDollarChange = (e) => {
+    const value = parseInt(e.target.value) || 0;
+    if (value >= 0) {
+      setPointsPerDollar(value);
+    }
+  };
+
+  const handleRewardChange = (id, field, value) => {
+    setRewards(
+      rewards.map((reward) =>
+        reward.id === id
+          ? { ...reward, [field]: field === "pointsRequired" || field === "discountAmount" ? parseInt(value) || 0 : value }
+          : reward
+      )
+    );
+  };
+
+  const handleAddReward = () => {
+    const newId = Math.max(...rewards.map((r) => r.id), 0) + 1;
+    setRewards([
+      ...rewards,
+      { id: newId, pointsRequired: 100, discountAmount: 5, discountType: "dollar" },
+    ]);
+  };
+
+  const handleRemoveReward = (id) => {
+    if (rewards.length > 1) {
+      setRewards(rewards.filter((reward) => reward.id !== id));
+    }
+  };
+
+  const handleSave = async () => {
+    // Will be implemented in Phase 5
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+    setIsSaving(false);
+    alert("Settings saved! (This will connect to backend in Phase 5)");
+  };
+
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold mb-4">Loyalty Program Settings</h1>
-      <p className="text-gray-600">Configure your salon's loyalty program.</p>
-      <div className="mt-8 p-6 bg-gray-100 rounded-lg">
-        <p className="text-sm text-gray-500">👷 This page is under construction</p>
+    <div className="max-w-6xl mx-auto p-6 space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2">Loyalty Program Settings</h1>
+        <p className="text-gray-600">Configure how customers earn and redeem loyalty points</p>
+      </div>
+
+      {/* Points Earning Configuration */}
+      <div className="bg-white border rounded-2xl p-5">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Points Earning Rate</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Points per dollar spent
+            </label>
+            <div className="flex items-center gap-3">
+              <Input
+                type="number"
+                min="0"
+                value={pointsPerDollar}
+                onChange={handlePointsPerDollarChange}
+                className="w-32"
+              />
+              <span className="text-gray-600">point{pointsPerDollar !== 1 ? "s" : ""} per $1</span>
+            </div>
+            <p className="text-sm text-gray-500 mt-2">
+              Customers will earn {pointsPerDollar} point{pointsPerDollar !== 1 ? "s" : ""} for every dollar spent
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Reward Tiers Configuration */}
+      <div className="bg-white border rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Reward Tiers</h2>
+          <Button onClick={handleAddReward} variant="outline" size="sm">
+            + Add Reward
+          </Button>
+        </div>
+        <div className="space-y-4">
+          {rewards.map((reward, index) => (
+            <div
+              key={reward.id}
+              className="rounded-xl border p-4 bg-white"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-gray-700">Reward {index + 1}</span>
+                {rewards.length > 1 && (
+                  <Button
+                    onClick={() => handleRemoveReward(reward.id)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Points Required
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={reward.pointsRequired}
+                    onChange={(e) => handleRewardChange(reward.id, "pointsRequired", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Discount Amount ($)
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={reward.discountAmount}
+                    onChange={(e) => handleRewardChange(reward.id, "discountAmount", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">{reward.pointsRequired} points</span> ={" "}
+                  <span className="font-medium">${reward.discountAmount} discount</span>
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className="rounded-xl px-8"
+          size="lg"
+        >
+          {isSaving ? "Saving..." : "Save Settings"}
+        </Button>
       </div>
     </div>
   );
