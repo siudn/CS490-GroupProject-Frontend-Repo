@@ -101,28 +101,29 @@ export default function SignUp() {
           navigate(redirectPaths[formData.accountType] || "/booking");
         }, 2000);
       } else {
-        // Real API call would go here
+        // Real API call
         const response = await fetch(`${import.meta.env.VITE_API}/auth/signup`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include",
           body: JSON.stringify({
+            email: formData.email,
             first_name: formData.firstName,
             last_name: formData.lastName,
-            email: formData.email,
             password: formData.password,
+            phone: formData.phone || "", // Optional phone field
             role: formData.accountType === "owner" ? "salon_owner" : formData.accountType
           }),
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Registration failed");
+          const errorData = await response.json().catch(() => ({ error: "Registration failed" }));
+          throw new Error(errorData.error || errorData.message || "Registration failed");
         }
         
-        setSuccessMessage("Account created successfully! Please check your email to verify your account.");
+        const data = await response.json();
+        setSuccessMessage(data.message || "Account created successfully! Please check your email to verify your account.");
         setTimeout(() => {
           navigate("/auth/sign-in");
         }, 3000);

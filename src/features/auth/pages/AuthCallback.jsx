@@ -17,17 +17,27 @@ export default function AuthCallback() {
       const accessToken = searchParams.get("access_token");
       const error = searchParams.get("error");
       const errorDescription = searchParams.get("error_description");
+      
+      // Also check for common Supabase/auth variations
+      const hash = window.location.hash;
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const hashAccessToken = hashParams.get("access_token");
+      const hashType = hashParams.get("type");
 
-      // Handle errors from Supabase
-      if (error) {
+      // Handle errors from Supabase/auth
+      if (error || hashParams.get("error")) {
         setStatus("error");
-        setMessage(errorDescription || "An error occurred. Please try again.");
+        const errorMsg = errorDescription || hashParams.get("error_description") || "An error occurred. Please try again.";
+        setMessage(errorMsg);
         setTimeout(() => navigate("/auth/sign-in"), 3000);
         return;
       }
 
-      // Handle email confirmation
-      if (type === "signup" || type === "email" || accessToken) {
+      // Handle email confirmation - check multiple parameter locations
+      const hasAccessToken = accessToken || hashAccessToken;
+      const confirmationType = type || hashType;
+      
+      if (confirmationType === "signup" || confirmationType === "email" || hasAccessToken) {
         setStatus("success");
         setMessage("Email confirmed! Redirecting to sign in...");
         
@@ -41,13 +51,14 @@ export default function AuthCallback() {
       }
 
       // Handle password recovery
-      if (type === "recovery" && token) {
+      if (confirmationType === "recovery" && (token || hashAccessToken)) {
         setStatus("success");
         setMessage("Redirecting to reset password...");
         
-        // Redirect to reset password page with token
+        // Use token from URL or hash
+        const resetToken = token || hashAccessToken;
         setTimeout(() => {
-          navigate(`/auth/reset-password?token=${token}`);
+          navigate(`/auth/reset-password?token=${resetToken}`);
         }, 1500);
         return;
       }

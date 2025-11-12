@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { setAccessToken, setRefreshToken, clearTokens, getAccessToken } from "../../shared/api/client.js";
 
 const AuthCtx = createContext(null);
 
@@ -10,31 +11,72 @@ function RealAuthProvider({ children }) {
     const res = await fetch(`${import.meta.env.VITE_API}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ email, password }),
     });
-    if (!res.ok) throw new Error("Login failed");
-    const data = await res.json(); // expect { id, role, email }
-    setUser(data);
-    return data; // Return user data for role-based redirects
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: "Login failed" }));
+      throw new Error(errorData.error || "Login failed");
+    }
+    
+    const data = await res.json(); // expect { access_token, refresh_token, user, ... }
+    
+    // Store tokens
+    if (data.access_token) {
+      setAccessToken(data.access_token);
+    }
+    if (data.refresh_token) {
+      setRefreshToken(data.refresh_token);
+    }
+    
+    // Set user from response
+    const userData = data.user || { id: data.id, role: data.role, email: data.email };
+    setUser(userData);
+    return userData; // Return user data for role-based redirects
   };
 
   const logout = async () => {
-    await fetch(`${import.meta.env.VITE_API}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
+    const token = getAccessToken();
+    if (token) {
+      try {
+        await fetch(`${import.meta.env.VITE_API}/auth/logout`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+        });
+      } catch (error) {
+        // Continue with logout even if API call fails
+        console.error("Logout API call failed:", error);
+      }
+    }
+    clearTokens();
     setUser(null);
   };
 
   useEffect(() => {
     (async () => {
+      const token = getAccessToken();
+      if (!token) return;
+      
       try {
         const r = await fetch(`${import.meta.env.VITE_API}/auth/me`, {
-          credentials: "include",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
         });
-        if (r.ok) setUser(await r.json());
-      } catch {}
+        if (r.ok) {
+          const userData = await r.json();
+          setUser(userData);
+        } else {
+          // Token invalid, clear it
+          clearTokens();
+        }
+      } catch (error) {
+        // Network error or invalid token
+        clearTokens();
+      }
     })();
   }, []);
 

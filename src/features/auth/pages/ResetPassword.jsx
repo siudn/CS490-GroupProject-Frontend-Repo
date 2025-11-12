@@ -84,11 +84,12 @@ export default function ResetPassword() {
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to reset password");
+          const errorData = await response.json().catch(() => ({ error: "Failed to reset password" }));
+          throw new Error(errorData.error || errorData.message || "Failed to reset password");
         }
         
-        setSuccessMessage("Password reset successfully! Redirecting to login...");
+        const data = await response.json();
+        setSuccessMessage(data.message || "Password reset successfully! Redirecting to login...");
         setTimeout(() => {
           navigate("/auth/sign-in");
         }, 2000);
