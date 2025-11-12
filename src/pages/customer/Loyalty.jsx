@@ -1,26 +1,109 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../shared/ui/button";
+import { getCustomerPoints, getLoyaltyRewards, redeemPoints } from "../../features/loyalty/api.js";
 
 export default function Loyalty() {
-  // Mock data - will be replaced with API calls in Phase 4
-  const [pointsBalance] = useState(250);
-  const [rewards] = useState([
-    { id: 1, pointsRequired: 100, discountAmount: 5, discountType: "dollar" },
-    { id: 2, pointsRequired: 200, discountAmount: 10, discountType: "dollar" },
-    { id: 3, pointsRequired: 300, discountAmount: 15, discountType: "dollar" },
-  ]);
-  const [activity] = useState([
-    { id: 1, type: "earned", points: 50, description: "Appointment completed", date: "2025-01-15" },
-    { id: 2, type: "redeemed", points: -100, description: "Redeemed $5 discount", date: "2025-01-10" },
-    { id: 3, type: "earned", points: 75, description: "Appointment completed", date: "2025-01-05" },
-    { id: 4, type: "earned", points: 45, description: "Appointment completed", date: "2024-12-28" },
-  ]);
+  const [pointsData, setPointsData] = useState(null);
+  const [rewards, setRewards] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [redeeming, setRedeeming] = useState(null);
 
-  const handleRedeem = (rewardId) => {
-    // Will be implemented in Phase 4
-    console.log("Redeem reward:", rewardId);
-    alert("Redeem functionality will be available after API integration");
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const [points, rewardsData] = await Promise.all([
+          getCustomerPoints(),
+          getLoyaltyRewards(),
+        ]);
+        if (!alive) return;
+        setPointsData(points);
+        setRewards(rewardsData);
+      } catch (err) {
+        if (!alive) return;
+        setError(err.message || "Failed to load loyalty data");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const handleRedeem = async (rewardId) => {
+    if (redeeming) return;
+    
+    const reward = rewards.find((r) => r.id === rewardId);
+    if (!reward) return;
+
+    if (pointsData.balance < reward.pointsRequired) {
+      alert("Not enough points to redeem this reward");
+      return;
+    }
+
+    if (!confirm(`Redeem ${reward.pointsRequired} points for $${reward.discountAmount} discount?`)) {
+      return;
+    }
+
+    setRedeeming(rewardId);
+    try {
+      const result = await redeemPoints(rewardId);
+      if (result.success) {
+        // Update points balance
+        setPointsData((prev) => ({
+          ...prev,
+          balance: result.newBalance || prev.balance - reward.pointsRequired,
+          activity: [
+            {
+              id: Date.now(),
+              type: "redeemed",
+              points: -reward.pointsRequired,
+              description: `Redeemed $${reward.discountAmount} discount`,
+              date: new Date().toISOString().split("T")[0],
+              rewardId,
+            },
+            ...prev.activity,
+          ],
+        }));
+        alert(`Success! You've redeemed ${reward.pointsRequired} points for a $${reward.discountAmount} discount.`);
+      }
+    } catch (err) {
+      alert(err.message || "Failed to redeem reward");
+    } finally {
+      setRedeeming(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-white border rounded-2xl p-8 text-center">
+          <div className="text-gray-600">Loading loyalty data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-white border rounded-2xl p-8 text-center">
+          <div className="text-red-600 mb-2">Error loading loyalty data</div>
+          <div className="text-sm text-gray-600">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pointsData) {
+    return null;
+  }
+
+  const { balance, activity } = pointsData;
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -32,7 +115,7 @@ export default function Loyalty() {
       {/* Points Balance Card */}
       <div className="bg-white border rounded-2xl p-5">
         <div className="text-center py-8">
-          <div className="text-5xl font-bold text-gray-900 mb-2">{pointsBalance}</div>
+          <div className="text-5xl font-bold text-gray-900 mb-2">{balance}</div>
           <div className="text-lg text-gray-600">Loyalty Points</div>
           <p className="text-sm text-gray-500 mt-2">Earn points with every visit and redeem for discounts</p>
         </div>
@@ -61,11 +144,15 @@ export default function Loyalty() {
                 </div>
                 <Button
                   onClick={() => handleRedeem(reward.id)}
-                  disabled={!canRedeem}
+                  disabled={!canRedeem || redeeming === reward.id}
                   className="w-full rounded-xl"
                   variant={canRedeem ? "default" : "secondary"}
                 >
-                  {canRedeem ? "Redeem Now" : "Not Enough Points"}
+                  {redeeming === reward.id
+                    ? "Redeeming..."
+                    : canRedeem
+                    ? "Redeem Now"
+                    : "Not Enough Points"}
                 </Button>
               </div>
             );
