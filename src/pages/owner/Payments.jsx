@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../shared/ui/button";
 import { Input } from "../../shared/ui/input";
 import {
@@ -9,66 +9,39 @@ import {
   TableHeader,
   TableRow,
 } from "../../shared/ui/table";
+import { getPaymentHistory } from "../../features/loyalty/api.js";
 
 export default function Payments() {
-  // Mock data - will be replaced with API calls in Phase 7
-  const [payments] = useState([
-    {
-      id: 1,
-      date: "2025-01-15",
-      customer: "John Smith",
-      service: "Haircut",
-      amount: 45,
-      status: "paid",
-      paymentMethod: "card",
-    },
-    {
-      id: 2,
-      date: "2025-01-14",
-      customer: "Sarah Johnson",
-      service: "Hair Coloring",
-      amount: 120,
-      status: "paid",
-      paymentMethod: "card",
-    },
-    {
-      id: 3,
-      date: "2025-01-13",
-      customer: "Mike Chen",
-      service: "Haircut",
-      amount: 50,
-      status: "paid",
-      paymentMethod: "card",
-    },
-    {
-      id: 4,
-      date: "2025-01-12",
-      customer: "Emma Davis",
-      service: "Beard Trim",
-      amount: 25,
-      status: "paid",
-      paymentMethod: "cash",
-    },
-    {
-      id: 5,
-      date: "2025-01-11",
-      customer: "Alex Rivera",
-      service: "Haircut",
-      amount: 45,
-      status: "unpaid",
-      paymentMethod: null,
-    },
-  ]);
-
+  const [payments, setPayments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [dateFilter, setDateFilter] = useState({ start: "", end: "" });
 
-  const filteredPayments = payments.filter((payment) => {
-    if (dateFilter.start && payment.date < dateFilter.start) return false;
-    if (dateFilter.end && payment.date > dateFilter.end) return false;
-    return true;
-  });
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const data = await getPaymentHistory(
+          dateFilter.start || null,
+          dateFilter.end || null
+        );
+        if (!alive) return;
+        setPayments(data);
+      } catch (err) {
+        if (!alive) return;
+        setError(err.message || "Failed to load payment history");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [dateFilter.start, dateFilter.end]);
 
-  const totalRevenue = filteredPayments
+  const totalRevenue = payments
     .filter((p) => p.status === "paid")
     .reduce((sum, p) => sum + p.amount, 0);
 
@@ -81,12 +54,28 @@ export default function Payments() {
     });
   };
 
+  if (loading && payments.length === 0) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-white border rounded-2xl p-8 text-center">
+          <div className="text-gray-600">Loading payment history...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Payments & Billing</h1>
         <p className="text-gray-600">View payment history and manage revenue</p>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Summary Card */}
       <div className="bg-white border rounded-2xl p-5">
@@ -98,13 +87,13 @@ export default function Payments() {
           <div>
             <div className="text-sm text-gray-600 mb-1">Paid Appointments</div>
             <div className="text-2xl font-semibold text-gray-900">
-              {filteredPayments.filter((p) => p.status === "paid").length}
+              {payments.filter((p) => p.status === "paid").length}
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-600 mb-1">Pending Payments</div>
             <div className="text-2xl font-semibold text-gray-900">
-              {filteredPayments.filter((p) => p.status === "unpaid").length}
+              {payments.filter((p) => p.status === "unpaid").length}
             </div>
           </div>
         </div>
@@ -159,14 +148,20 @@ export default function Payments() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredPayments.length === 0 ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  Loading...
+                </TableCell>
+              </TableRow>
+            ) : payments.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                   No payments found for the selected date range
                 </TableCell>
               </TableRow>
             ) : (
-              filteredPayments.map((payment) => (
+              payments.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell className="font-medium">
                     {formatDate(payment.date)}

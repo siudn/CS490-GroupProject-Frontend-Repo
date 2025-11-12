@@ -56,6 +56,31 @@ export async function updateLoyaltyConfig(config) {
   });
 }
 
+// Get owner's payment history
+export async function getPaymentHistory(startDate = null, endDate = null) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    let payments = [...MOCK_PAYMENTS];
+    
+    // Filter by date if provided
+    if (startDate) {
+      payments = payments.filter((p) => p.date >= startDate);
+    }
+    if (endDate) {
+      payments = payments.filter((p) => p.date <= endDate);
+    }
+    
+    return payments;
+  }
+  
+  const params = new URLSearchParams();
+  if (startDate) params.set("start_date", startDate);
+  if (endDate) params.set("end_date", endDate);
+  
+  const queryString = params.toString();
+  return api(`/owner/payments${queryString ? `?${queryString}` : ""}`);
+}
+
 // Mock data
 const MOCK_CUSTOMER_POINTS = {
   balance: 250,
@@ -111,4 +136,52 @@ const MOCK_LOYALTY_CONFIG = {
     { id: 3, pointsRequired: 300, discountAmount: 15, discountType: "dollar" },
   ],
 };
+
+const MOCK_PAYMENTS = [
+  {
+    id: 1,
+    date: "2025-01-15",
+    customer: "John Smith",
+    service: "Haircut",
+    amount: 45,
+    status: "paid",
+    paymentMethod: "card",
+  },
+  {
+    id: 2,
+    date: "2025-01-14",
+    customer: "Sarah Johnson",
+    service: "Hair Coloring",
+    amount: 120,
+    status: "paid",
+    paymentMethod: "card",
+  },
+  {
+    id: 3,
+    date: "2025-01-13",
+    customer: "Mike Chen",
+    service: "Haircut",
+    amount: 50,
+    status: "paid",
+    paymentMethod: "card",
+  },
+  {
+    id: 4,
+    date: "2025-01-12",
+    customer: "Emma Davis",
+    service: "Beard Trim",
+    amount: 25,
+    status: "paid",
+    paymentMethod: "cash",
+  },
+  {
+    id: 5,
+    date: "2025-01-11",
+    customer: "Alex Rivera",
+    service: "Haircut",
+    amount: 45,
+    status: "unpaid",
+    paymentMethod: null,
+  },
+];
 
