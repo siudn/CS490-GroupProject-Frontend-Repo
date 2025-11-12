@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../features/auth/auth-provider.jsx";
 
 const linkClass = ({ isActive }) =>
-  `px-3 py-2 rounded-md font-semibold transition-colors duration-150 ${
+  `px-4 py-2.5 rounded-md font-semibold transition-colors duration-150 ${
     isActive ? "bg-indigo-100 text-indigo-700" : "text-gray-700 hover:bg-gray-100"
   }`;
 
@@ -34,6 +34,7 @@ export default function Header() {
           </>
         );
       case "owner":
+      case "salon_owner":
         return (
           <>
             <NavLink to="/owner/dashboard" className={linkClass}>Dashboard</NavLink>
@@ -66,12 +67,12 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
-      <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 p-4">
-        <div className="flex items-center gap-4">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-6 px-6 py-4">
+        <div className="flex items-center gap-6">
           <NavLink to="/" className="text-lg font-extrabold text-indigo-600 hover:text-indigo-700">
             Salonica
           </NavLink>
-          <nav className="flex gap-2">
+          <nav className="flex gap-3">
             {getNavLinks()}
           </nav>
         </div>
