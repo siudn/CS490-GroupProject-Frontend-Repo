@@ -51,11 +51,12 @@ export default function ForgotPassword() {
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to send reset email");
+          const errorData = await response.json().catch(() => ({ error: "Failed to send reset email" }));
+          throw new Error(errorData.error || errorData.message || "Failed to send reset email");
         }
         
-        setSuccessMessage("Password reset link sent! Check your email for instructions.");
+        const data = await response.json();
+        setSuccessMessage(data.message || "Password reset link sent! Check your email for instructions.");
         setTimeout(() => {
           navigate("/auth/sign-in");
         }, 3000);
