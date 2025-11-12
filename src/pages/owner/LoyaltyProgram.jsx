@@ -1,16 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../../shared/ui/button";
 import { Input } from "../../shared/ui/input";
+import { getLoyaltyConfig, updateLoyaltyConfig } from "../../features/loyalty/api.js";
 
 export default function LoyaltyProgram() {
-  // Mock data - will be replaced with API calls in Phase 5
   const [pointsPerDollar, setPointsPerDollar] = useState(1);
-  const [rewards, setRewards] = useState([
-    { id: 1, pointsRequired: 100, discountAmount: 5, discountType: "dollar" },
-    { id: 2, pointsRequired: 200, discountAmount: 10, discountType: "dollar" },
-    { id: 3, pointsRequired: 300, discountAmount: 15, discountType: "dollar" },
-  ]);
+  const [rewards, setRewards] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handlePointsPerDollarChange = (e) => {
     const value = parseInt(e.target.value) || 0;
@@ -43,13 +42,70 @@ export default function LoyaltyProgram() {
     }
   };
 
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const config = await getLoyaltyConfig();
+        if (!alive) return;
+        setPointsPerDollar(config.pointsPerDollar || 1);
+        setRewards(config.rewards || []);
+      } catch (err) {
+        if (!alive) return;
+        setError(err.message || "Failed to load loyalty configuration");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const handleSave = async () => {
-    // Will be implemented in Phase 5
+    if (rewards.length === 0) {
+      alert("Please add at least one reward tier");
+      return;
+    }
+
+    // Validate rewards
+    for (const reward of rewards) {
+      if (reward.pointsRequired <= 0 || reward.discountAmount <= 0) {
+        alert("All reward tiers must have valid points and discount amounts");
+        return;
+      }
+    }
+
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
-    setIsSaving(false);
-    alert("Settings saved! (This will connect to backend in Phase 5)");
+    setError("");
+    setSuccessMessage("");
+    try {
+      const result = await updateLoyaltyConfig({
+        pointsPerDollar,
+        rewards,
+      });
+      if (result.success) {
+        setSuccessMessage(result.message || "Settings saved successfully!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+      }
+    } catch (err) {
+      setError(err.message || "Failed to save settings");
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-white border rounded-2xl p-8 text-center">
+          <div className="text-gray-600">Loading loyalty configuration...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -57,6 +113,18 @@ export default function LoyaltyProgram() {
         <h1 className="text-2xl font-semibold text-gray-900 mb-2">Loyalty Program Settings</h1>
         <p className="text-gray-600">Configure how customers earn and redeem loyalty points</p>
       </div>
+
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-green-800 text-sm">
+          {successMessage}
+        </div>
+      )}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Points Earning Configuration */}
       <div className="bg-white border rounded-2xl p-5">
