@@ -1,7 +1,7 @@
 import { api } from "../../shared/api/client.js";
 
 const AVAILABILITY_BASE = "/schedule/availability";
-const APPOINTMENTS_BASE = "/appointments";
+const APPOINTMENTS_BASE = "/appointments/";
 
 export async function fetchAvailability() {
   return api(AVAILABILITY_BASE);

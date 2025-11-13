@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CalendarIcon,
   Clock,
   User as UserIcon,
   CheckCircle,
   AlertCircle,
+  Settings,
+  Eye,
 } from "lucide-react";
 import { fetchAppointments, patchAppointment } from "../api.js";
 
@@ -69,12 +72,13 @@ const normalizeAppointment = (raw) => {
 };
 
 export default function ProviderDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("schedule");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [blockedSlots, setBlockedSlots] = useState([]);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState("");
+  const [selectedSlots, setSelectedSlots] = useState([]);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState(null);
@@ -124,11 +128,20 @@ export default function ProviderDashboard() {
         : [];
       setAppointments(rows.map(normalizeAppointment));
     } catch (err) {
-      setAppointmentsError(
-        err instanceof Error
-          ? err.message
-          : "Failed to load appointments for this barber."
-      );
+      let errorMessage = "Failed to load appointments for this barber.";
+      
+      if (err instanceof Error) {
+        // Check for specific error types
+        if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+          errorMessage = "Unable to connect to the server. Please check if the backend is running and VITE_API is configured correctly.";
+        } else if (err.message.includes("No barber profile found") || err.message.includes("barber profile") || err.message.includes("PGRST116") || err.message.includes("Cannot coerce")) {
+          errorMessage = "Barber profile not found. Please ensure your account is associated with a barber profile in the database.";
+        } else {
+          errorMessage = err.message;
+        }
+      }
+      
+      setAppointmentsError(errorMessage);
     } finally {
       setLoadingAppointments(false);
     }
@@ -220,26 +233,46 @@ export default function ProviderDashboard() {
   };
 
   const handleBlockSlot = () => {
-    if (!selectedSlot) return;
+    if (selectedSlots.length === 0) return;
 
-    const hasExistingAppointment = todayAppointments.find(
-      (a) => a.displayTime === selectedSlot
-    );
+    // Check for conflicts
+    const conflictingSlots = selectedSlots.filter((slot) => {
+      return todayAppointments.some((a) => a.displayTime === slot);
+    });
 
-    if (hasExistingAppointment) {
+    if (conflictingSlots.length > 0) {
       setConflictError(
-        `Cannot block ${selectedSlot} - Appointment already scheduled at this time`
+        `Cannot block ${conflictingSlots.join(", ")} - Appointment(s) already scheduled at these times`
       );
       setTimeout(() => setConflictError(null), 5000);
       return;
     }
 
-    setBlockedSlots((prev) => [...prev, selectedSlot]);
+    // Add all selected slots to blocked slots
+    setBlockedSlots((prev) => {
+      const newBlocked = [...prev];
+      selectedSlots.forEach((slot) => {
+        if (!newBlocked.includes(slot)) {
+          newBlocked.push(slot);
+        }
+      });
+      return newBlocked;
+    });
     setShowBlockDialog(false);
-    setSelectedSlot("");
+    setSelectedSlots([]);
     setConflictError(null);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
+  };
+
+  const toggleSlotSelection = (time) => {
+    setSelectedSlots((prev) => {
+      if (prev.includes(time)) {
+        return prev.filter((slot) => slot !== time);
+      } else {
+        return [...prev, time];
+      }
+    });
   };
 
   const handleUnblockSlot = (time) => {
@@ -337,6 +370,25 @@ export default function ProviderDashboard() {
       )}
 
       <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">Provider Dashboard</h1>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate("/barber/schedule/view")}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-300 text-gray-900 rounded-md hover:bg-gray-200 text-sm font-medium"
+            >
+              <Eye className="h-4 w-4" />
+              View Availability
+            </button>
+            <button
+              onClick={() => navigate("/barber/schedule/edit")}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 text-sm font-medium"
+            >
+              <Settings className="h-4 w-4" />
+              Edit Availability
+            </button>
+          </div>
+        </div>
         <nav className="flex p-1 bg-gray-200 rounded-full w-full">
           <button
             onClick={() => setActiveTab("schedule")}
@@ -346,7 +398,7 @@ export default function ProviderDashboard() {
                 : "text-gray-700 hover:text-gray-900"
             }`}
           >
-            My Schedule
+            Appointments
           </button>
           <button
             onClick={() => setActiveTab("notifications")}
@@ -713,33 +765,41 @@ export default function ProviderDashboard() {
 
       {showBlockDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-2">Block Time Slot</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Select a time slot to mark as unavailable
+          <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[80vh] flex flex-col">
+            <h3 className="text-lg font-semibold mb-2">Block Time Slots</h3>
+            <p className="text-sm text-gray-600 mb-2">
+              Select one or more time slots to mark as unavailable
             </p>
-            <div className="space-y-2 mb-4">
+            {selectedSlots.length > 0 && (
+              <p className="text-sm text-gray-700 mb-4 font-medium">
+                {selectedSlots.length} slot{selectedSlots.length !== 1 ? "s" : ""} selected
+              </p>
+            )}
+            <div className="space-y-2 mb-4 overflow-y-auto flex-1">
               {timeSlots
                 .filter((time) => getSlotStatus(time) === "available")
                 .map((time) => (
                   <button
                     key={time}
-                    onClick={() => setSelectedSlot(time)}
-                    className={`w-full px-4 py-2 rounded-md ${
-                      selectedSlot === time
+                    onClick={() => toggleSlotSelection(time)}
+                    className={`w-full px-4 py-2 rounded-md flex items-center justify-between ${
+                      selectedSlots.includes(time)
                         ? "bg-gray-900 text-white"
                         : "border border-gray-300 hover:bg-gray-50"
                     }`}
                   >
-                    {time}
+                    <span>{time}</span>
+                    {selectedSlots.includes(time) && (
+                      <span className="text-sm">✓</span>
+                    )}
                   </button>
                 ))}
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
               <button
                 onClick={() => {
                   setShowBlockDialog(false);
-                  setSelectedSlot("");
+                  setSelectedSlots([]);
                 }}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
               >
@@ -747,10 +807,10 @@ export default function ProviderDashboard() {
               </button>
               <button
                 onClick={handleBlockSlot}
-                disabled={!selectedSlot}
+                disabled={selectedSlots.length === 0}
                 className="flex-1 px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Block Slot
+                Block {selectedSlots.length > 0 ? `${selectedSlots.length} ` : ""}Slot{selectedSlots.length !== 1 ? "s" : ""}
               </button>
             </div>
           </div>
