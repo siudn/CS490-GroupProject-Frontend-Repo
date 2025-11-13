@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/auth-provider";
+import salonicaLogo from "../assets/salonica.png";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -66,6 +67,11 @@ export default function Home() {
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32">
           <div className="text-center">
+            <img
+              src={salonicaLogo}
+              alt="Salonica"
+              className="mx-auto mb-10 h-16 md:h-20 w-auto drop-shadow-lg"
+            />
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6">
               Your Perfect Salon,
               <br />
@@ -518,7 +524,11 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             {/* Brand */}
             <div>
-              <div className="text-2xl font-bold text-white mb-4">Salonica</div>
+              <img
+                src={salonicaLogo}
+                alt="Salonica"
+                className="h-10 w-auto mb-4"
+              />
               <p className="text-gray-400">
                 Your perfect salon appointment, just a click away.
               </p>
