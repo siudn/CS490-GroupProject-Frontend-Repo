@@ -8,27 +8,32 @@ export async function getCustomerPoints() {
   return api("/me/points");
 }
 
-// Get available loyalty rewards
-export async function getLoyaltyRewards() {
+// Get available loyalty rewards for a specific salon
+export async function getLoyaltyRewards(salonId = null) {
   if (import.meta.env.VITE_MOCK === "1") {
     return MOCK_REWARDS;
+  }
+  if (salonId) {
+    return api(`/loyalty/rewards?salon_id=${salonId}`);
   }
   return api("/loyalty/rewards");
 }
 
-// Redeem points for a reward
-export async function redeemPoints(rewardId) {
+// Redeem points for a reward at a specific salon
+export async function redeemPoints(salonId) {
   if (import.meta.env.VITE_MOCK === "1") {
     await new Promise((resolve) => setTimeout(resolve, 500));
+    const threshold = MOCK_REWARDS.pointThreshold || 100;
+    const salon = MOCK_CUSTOMER_POINTS.find((s) => s.salon_id === salonId) || MOCK_CUSTOMER_POINTS[0];
     return {
       success: true,
       message: "Reward redeemed successfully",
-      newBalance: MOCK_CUSTOMER_POINTS.balance - (MOCK_REWARDS.find((r) => r.id === rewardId)?.pointsRequired || 0),
+      newBalance: (salon?.balance || 150) - threshold,
     };
   }
   return api("/loyalty/redeem", {
     method: "POST",
-    body: JSON.stringify({ rewardId }),
+    body: JSON.stringify({ salon_id: salonId }),
   });
 }
 
@@ -81,60 +86,65 @@ export async function getPaymentHistory(startDate = null, endDate = null) {
   return api(`/owner/payments${queryString ? `?${queryString}` : ""}`);
 }
 
-// Mock data
-const MOCK_CUSTOMER_POINTS = {
-  balance: 250,
-  totalEarned: 500,
-  totalRedeemed: 250,
-  activity: [
-    {
-      id: 1,
-      type: "earned",
-      points: 50,
-      description: "Appointment completed",
-      date: "2025-01-15",
-      appointmentId: "A-2001",
-    },
-    {
-      id: 2,
-      type: "redeemed",
-      points: -100,
-      description: "Redeemed $5 discount",
-      date: "2025-01-10",
-      rewardId: 1,
-    },
-    {
-      id: 3,
-      type: "earned",
-      points: 75,
-      description: "Appointment completed",
-      date: "2025-01-05",
-      appointmentId: "A-1999",
-    },
-    {
-      id: 4,
-      type: "earned",
-      points: 45,
-      description: "Appointment completed",
-      date: "2024-12-28",
-      appointmentId: "A-1998",
-    },
-  ],
-};
-
-const MOCK_REWARDS = [
-  { id: 1, pointsRequired: 100, discountAmount: 5, discountType: "dollar" },
-  { id: 2, pointsRequired: 200, discountAmount: 10, discountType: "dollar" },
-  { id: 3, pointsRequired: 300, discountAmount: 15, discountType: "dollar" },
+// Mock data - salon-specific balances
+const MOCK_CUSTOMER_POINTS = [
+  {
+    salon_id: "salon-1",
+    salon_name: "Elite Hair Studio",
+    balance: 150,
+    activity: [
+      {
+        id: 1,
+        type: "earned",
+        points: 50,
+        description: "Appointment completed at Elite Hair Studio",
+        date: "2025-01-15",
+        appointmentId: "A-2001",
+      },
+      {
+        id: 2,
+        type: "earned",
+        points: 75,
+        description: "Appointment completed at Elite Hair Studio",
+        date: "2025-01-05",
+        appointmentId: "A-1999",
+      },
+      {
+        id: 3,
+        type: "earned",
+        points: 45,
+        description: "Appointment completed at Elite Hair Studio",
+        date: "2024-12-28",
+        appointmentId: "A-1998",
+      },
+    ],
+  },
+  {
+    salon_id: "salon-2",
+    salon_name: "Glamour Salon",
+    balance: 100,
+    activity: [
+      {
+        id: 4,
+        type: "earned",
+        points: 100,
+        description: "Appointment completed at Glamour Salon",
+        date: "2025-01-10",
+        appointmentId: "A-2000",
+      },
+    ],
+  },
 ];
+
+const MOCK_REWARDS = {
+  pointThreshold: 100,
+  rewardDiscount: 10, // percentage (0-100)
+};
 
 const MOCK_LOYALTY_CONFIG = {
   pointsPerDollar: 1,
-  rewards: [
-    { id: 1, pointsRequired: 100, discountAmount: 5, discountType: "dollar" },
-    { id: 2, pointsRequired: 200, discountAmount: 10, discountType: "dollar" },
-    { id: 3, pointsRequired: 300, discountAmount: 15, discountType: "dollar" },
-  ],
+  pointThreshold: 100,
+  rewardDiscount: 10, // percentage (0-100)
 };
 
 const MOCK_PAYMENTS = [
