@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { listEmployees, listAvailability } from "../api.js";
+import { listEmployees, listAvailability, createAppointment, processPayment } from "../api.js";
 
 export default function BookingWizardModal({ salon, onClose }) {
   const [step, setStep] = useState(1);
@@ -39,32 +39,45 @@ export default function BookingWizardModal({ salon, onClose }) {
     (step === 5 && payStatus === "ok");
 
   async function onConfirmPay(){
-    setPayStatus("proc");
-    // PayPal: instant success (mock)
-    if (payMethod === "paypal") {
-      await wait(600);
-      finishSuccess();
-      return;
-    }
-    // Card/Debit mock rules (copy/paste friendly)
-    // Success: 4242 4242 4242 4242
-    // Fail:    4000 0000 0000 0002
-    const digits = card.number.replace(/\s+/g,"");
-    await wait(700);
-    if (digits === "4000000000000002") {
+    if (!employee || !service || !dateISO || !time) {
       setPayStatus("fail");
       return;
     }
-    if (digits === "4242424242424242" || digits.length >= 13) {
-      finishSuccess();
-      return;
+
+    setPayStatus("proc");
+    
+    try {
+      // Step 1: Create the appointment
+      const appointment = await createAppointment({
+        salonId: salon.id,
+        employeeId: employee.id,
+        serviceId: service.id,
+        dateISO,
+        time,
+        note,
+      });
+
+      // Step 2: Process payment via Stripe (backend handles actual Stripe integration)
+      const paymentResult = await processPayment(appointment.id, {
+        paymentMethod: payMethod,
+        cardDetails: (payMethod === "card" || payMethod === "debit") ? card : undefined,
+      });
+
+      if (paymentResult.success) {
+        // Payment successful - backend will auto-award loyalty points
+        finishSuccess(appointment.id);
+      } else {
+        setPayStatus("fail");
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      setPayStatus("fail");
     }
-    setPayStatus("fail");
   }
 
-  function finishSuccess() {
+  function finishSuccess(appointmentId) {
     setPayStatus("ok");
-    const ref = "BK-" + Math.random().toString(36).slice(2,8).toUpperCase();
+    const ref = appointmentId || "BK-" + Math.random().toString(36).slice(2,8).toUpperCase();
     setBookingRef(ref);
   }
 

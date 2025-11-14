@@ -83,6 +83,56 @@ export async function listUserAppointments() {
   return api("/me/appointments"); // expected: { active:[], history:[] }
 }
 
+// Create a new appointment
+export async function createAppointment({ salonId, employeeId, serviceId, dateISO, time, note }) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const whenISO = new Date(`${dateISO}T${time}:00Z`).toISOString();
+    return {
+      id: "A-" + Math.random().toString(36).slice(2, 8).toUpperCase(),
+      whenISO,
+      status: "pending_payment",
+    };
+  }
+  return api("/appointments", {
+    method: "POST",
+    body: JSON.stringify({
+      salonId,
+      employeeId,
+      serviceId,
+      date: dateISO,
+      time,
+      note: note || "",
+    }),
+  });
+}
+
+// Process payment for an appointment (Stripe integration)
+export async function processPayment(appointmentId, { paymentMethod, cardDetails }) {
+  if (import.meta.env.VITE_MOCK === "1") {
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    // Mock payment validation
+    if (paymentMethod === "paypal") {
+      return { success: true, paymentId: "pay_" + Math.random().toString(36).slice(2, 10) };
+    }
+    const digits = cardDetails?.number?.replace(/\s+/g, "") || "";
+    if (digits === "4000000000000002") {
+      throw new Error("Payment declined. Please try a different payment method.");
+    }
+    if (digits === "4242424242424242" || digits.length >= 13) {
+      return { success: true, paymentId: "pay_" + Math.random().toString(36).slice(2, 10) };
+    }
+    throw new Error("Payment failed. Please check your card details.");
+  }
+  return api(`/appointments/${appointmentId}/payment`, {
+    method: "POST",
+    body: JSON.stringify({
+      paymentMethod,
+      cardDetails: paymentMethod !== "paypal" ? cardDetails : undefined,
+    }),
+  });
+}
+
 export async function prepReschedule(id) {
   if (import.meta.env.VITE_MOCK === "1") return { ok: true };
   return api(`/appointments/${id}/reschedule`, { method: "GET" });
