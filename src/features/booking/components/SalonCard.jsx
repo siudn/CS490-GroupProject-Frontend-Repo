@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/auth-provider.jsx";
 
-export default function SalonCard({ salon, userCoords }) {
+export default function SalonCard({ salon }) {
   const { user } = useAuth();
   const rolePaths = {
     customer: "/customer/salon",
@@ -12,42 +12,32 @@ export default function SalonCard({ salon, userCoords }) {
   const basePath = user ? rolePaths[user.role] || "/customer/salon" : "/customer/salon";
   const linkTarget = `${basePath}/${salon.id}`;
 
-  const distance =
-    salon.distMiles != null
-      ? salon.distMiles
-      : userCoords && salon.coords
-      ? haversineMiles(userCoords.lat, userCoords.lng, salon.coords.lat, salon.coords.lng)
-      : null;
+  const services = (salon.services ?? []).map((s) => (typeof s === "string" ? s : s.name)).filter(Boolean);
+  const rating = salon.rating != null ? salon.rating.toFixed(1) : "New";
+  const reviews = salon.reviews_count ?? salon.reviews ?? 0;
+  const image =
+    salon.logo_url ||
+    "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=600&q=80";
 
   return (
     <Link to={linkTarget} className="bg-white rounded-xl border overflow-hidden shadow-sm block hover:shadow-md transition">
-      <img src={salon.img} alt={salon.name} className="h-44 w-full object-cover" />
+      <img src={image} alt={salon.name} className="h-44 w-full object-cover" />
       <div className="p-4 space-y-2">
         <div className="font-semibold">{salon.name}</div>
         <div className="text-sm text-gray-600 flex items-center gap-2">
-          <span>⭐ {salon.rating}</span>
-          <span>({salon.reviews})</span>
-          {distance != null && <span className="text-gray-500">{distance.toFixed(1)} mi away</span>}
+          <span>⭐ {rating}</span>
+          <span>({reviews})</span>
         </div>
         <div className="text-sm text-gray-600">📍 {salon.address}</div>
-        <p className="text-sm text-gray-700 line-clamp-2">{salon.blurb}</p>
+        {salon.description && (
+          <p className="text-sm text-gray-700 line-clamp-2">{salon.description}</p>
+        )}
         <div className="flex flex-wrap gap-1">
-          {salon.services.map((s) => (
-            <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-gray-100">
-              {s}
-            </span>
-          ))}
+          {services.slice(0, 4).map((s) => (
+            <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-gray-100">{s}</span>
+          )) || <span className="text-xs text-gray-500">Services coming soon</span>}
         </div>
       </div>
     </Link>
   );
-}
-
-function haversineMiles(lat1, lon1, lat2, lon2) {
-  const R = 3958.8;
-  const toRad = (x) => (x * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.asin(Math.sqrt(a));
 }
