@@ -8,7 +8,6 @@ export default function SalonSearch() {
   const [services, setServices] = useState([]);
   const [allServices, setAllServices] = useState([]);
   const [sort, setSort] = useState("top");
-  const [coords, setCoords] = useState(null);
   const [loading, setLoading] = useState(false);
   const [salons, setSalons] = useState([]);
 
@@ -28,31 +27,15 @@ export default function SalonSearch() {
   }, [q]);
 
   useEffect(() => {
-    if (sort === "nearby" && !coords) {
-      if (!("geolocation" in navigator)) {
-        alert("Your browser doesn’t support location services.");
-        setSort("top");
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => { alert("Location permission denied or unavailable."); setSort("top"); },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }
-  }, [sort, coords]);
-
-  useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
       try {
         const data = await listSalons({
           q: qDebounced,
-          location: sort === "nearby" && coords ? "" : location,
+          location,
           services,
           sort,
-          coords: sort === "nearby" ? coords : null,
         });
         if (alive) setSalons(data);
       } finally {
@@ -60,13 +43,13 @@ export default function SalonSearch() {
       }
     })();
     return () => { alive = false; };
-  }, [qDebounced, location, services, sort, coords]);
+  }, [qDebounced, location, services, sort]);
 
   const toggleService = (s) =>
     setServices((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const clearFilters = () => {
-    setQ(""); setLocation(""); setServices([]); setSort("top"); setCoords(null);
+    setQ(""); setLocation(""); setServices([]); setSort("top");
   };
 
   const chips = useMemo(
@@ -100,23 +83,17 @@ export default function SalonSearch() {
           />
           <input
             value={location}
-            onChange={(e) => { setLocation(e.target.value); setCoords(null); }}
+            onChange={(e) => setLocation(e.target.value)}
             placeholder="Location (city, zip)…"
             className="md:col-span-4 w-full rounded-lg border px-3 py-2"
-            disabled={sort === "nearby"}
-            title={sort === "nearby" ? "Using your current location" : ""}
           />
           <select
             value={sort}
-            onChange={(e) => {
-              const v = e.target.value;
-              setSort(v);
-              if (v === "top") setCoords(null);
-            }}
+            onChange={(e) => setSort(e.target.value)}
             className="md:col-span-3 w-full rounded-lg border px-3 py-2"
           >
             <option value="top">Top Rated</option>
-            <option value="nearby">Nearby</option>
+            <option value="recent">Recently Added</option>
           </select>
         </div>
 
@@ -132,7 +109,7 @@ export default function SalonSearch() {
               {s}
             </button>
           ))}
-          {(services.length > 0 || coords || q || location) && (
+          {(services.length > 0 || q || location) && (
             <button onClick={clearFilters} className="ml-2 text-sm text-gray-600 underline">
               Clear filters
             </button>
@@ -149,7 +126,7 @@ export default function SalonSearch() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {salons.map((s) => (
-            <SalonCard key={s.id} salon={s} userCoords={coords} />
+            <SalonCard key={s.id} salon={s} />
           ))}
         </div>
       )}
