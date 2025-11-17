@@ -1,17 +1,12 @@
-import { useEffect, useState } from "react";
-import {
-  listUserAppointments,
-  cancelAppointment as cancelApi, // not used directly—handled via modal
-  prepReschedule as prepApi,
-  submitReview,
-} from "../api.js";
+import { useCallback, useEffect, useState } from "react";
+import { listUserAppointments, submitReview } from "../api.js";
 import AppointmentCard from "../components/AppointmentCard.jsx";
 import RescheduleModal from "../widgets/RescheduleModal.jsx";
 import CancelModal from "../widgets/CancelModal.jsx";
 import PostAppointmentReview from "../components/PostAppointmentReview.jsx";
 
 export default function Appointments() {
-  const [data, setData] = useState({ active: [], history: [] });
+  const [data, setData] = useState({ upcoming: [], past: [] });
   const [tab, setTab] = useState("upcoming"); // 'upcoming' | 'past'
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -20,70 +15,43 @@ export default function Appointments() {
   const [resAppt, setResAppt] = useState(null);
   const [cancelAppt, setCancelAppt] = useState(null);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await listUserAppointments();
-        if (alive) setData(res);
-      } catch (e) {
-        if (alive) setErr("Failed to load appointments.");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await listUserAppointments();
+      setData(res);
+      setErr("");
+    } catch (e) {
+      setErr("Failed to load appointments.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // handlers (open modals)
   function onReschedule(appt) { setResAppt(appt); }
   function onCancel(appt) { setCancelAppt(appt); }
 
   // apply updates from modals
-  function applyUpdate(updated) {
-    setData(({ active, history }) => {
-      const inActive = active.some(a => a.id === updated.id);
-      if (updated.status === "cancelled") {
-        return {
-          active: inActive ? active.filter(a => a.id !== updated.id) : active,
-          history: [{ ...updated }, ...history],
-        };
-      }
-      return {
-        active: active.map(a => (a.id === updated.id ? { ...a, ...updated } : a)),
-        history,
-      };
-    });
-  }
-
-  function applyReview(id, review) {
-    setData(({ active, history }) => ({
-      active,
-      history: history.map((appt) =>
-        appt.id === id ? { ...appt, review } : appt,
-      ),
-    }));
-  }
-
   async function handleSubmitReview(id, payload) {
     const clean = {
       stars: payload.stars,
       comment: payload.comment?.trim() ?? "",
     };
 
-    const res = await submitReview(id, clean);
-    if (!res?.ok) {
-      throw new Error(res?.error || "Unable to submit review.");
-    }
-    applyReview(id, { stars: clean.stars, text: clean.comment });
+    await submitReview(id, clean);
+    await load();
   }
 
   if (loading) return <div className="max-w-6xl mx-auto p-6 text-gray-600">Loading…</div>;
   if (err) return <div className="max-w-6xl mx-auto p-6 text-red-600">{err}</div>;
 
-  const upcoming = data.active;
-  const past = data.history;
+  const upcoming = data.upcoming;
+  const past = data.past;
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -134,8 +102,8 @@ export default function Appointments() {
                 <PostAppointmentReview
                   appointmentId={a.id}
                   existingReview={a.review}
-                  salonName={a.salon.name}
-                  employeeName={a.employee.name}
+                  salonName={a.salon?.name}
+                  employeeName={a.barber?.name || a.employee?.name}
                   onSubmit={handleSubmitReview}
                 />
               ) : null}
@@ -148,14 +116,14 @@ export default function Appointments() {
         <RescheduleModal
           appt={resAppt}
           onClose={() => setResAppt(null)}
-          onSuccess={applyUpdate}
+          onSuccess={() => load()}
         />
       )}
       {cancelAppt && (
         <CancelModal
           appt={cancelAppt}
           onClose={() => setCancelAppt(null)}
-          onSuccess={applyUpdate}
+          onSuccess={() => load()}
         />
       )}
     </div>
