@@ -75,16 +75,11 @@ const MOCK_USER_PROFILE = {
 };
 
 const MOCK_USER_PREFERENCES = {
-  favoriteServices: ["haircut", "color", "beard"],
-  preferredStylist: null,
-  communicationPreferences: {
-    emailNotifications: true,
-    smsNotifications: true,
-    promotionalEmails: false,
-  },
+  notificationsEnabled: true,
   appointmentReminders: {
     dayBefore: true,
     hourBefore: true,
   },
+  promotionalNotifications: false,
 };
 

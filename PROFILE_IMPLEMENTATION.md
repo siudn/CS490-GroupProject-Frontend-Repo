@@ -13,11 +13,13 @@ The customer Profile page (`src/pages/customer/Profile.jsx`) has been enhanced t
    - Member since date display
    - Edit/Save/Cancel functionality
 
-2. **Preferences Section**
-   - Favorite services selection (haircut, color, blowout, shave, beard)
-   - Communication preferences (email notifications, SMS, promotional emails)
+2. **Notification Settings Section**
+   - Master toggle to enable/disable all notifications
    - Appointment reminder settings (day before, hour before)
+   - Promotional notifications toggle for salon offers and discounts
+   - Conditional display (sub-options only shown when notifications enabled)
    - Edit/Save/Cancel functionality
+   - All notifications are in-app only (displayed on website)
 
 3. **Visit History Section**
    - Display of past appointments with full details
@@ -114,7 +116,7 @@ GET /api/appointments/
 
 #### ❌ Endpoints NOT YET IMPLEMENTED:
 
-#### 4. Get User Preferences ⚠️ PENDING
+#### 4. Get User Notification Preferences ⚠️ PENDING
 ```
 ENDPOINT NOT YET AVAILABLE
 Recommended: GET /api/auth/preferences or include in /api/auth/me response
@@ -123,24 +125,38 @@ Recommended: GET /api/auth/preferences or include in /api/auth/me response
 **Suggested Response:**
 ```json
 {
-  "favoriteServices": ["haircut", "color", "beard"],
-  "preferredStylist": null,
-  "communicationPreferences": {
-    "emailNotifications": true,
-    "smsNotifications": true,
-    "promotionalEmails": false
-  },
+  "notificationsEnabled": true,
   "appointmentReminders": {
     "dayBefore": true,
     "hourBefore": true
-  }
+  },
+  "promotionalNotifications": false
 }
 ```
 
-#### 5. Update User Preferences ⚠️ PENDING
+**Notification System Design:**
+- All notifications are **in-app only** (displayed on website, no email/SMS)
+- `notificationsEnabled` is the master toggle - when false, all notifications are disabled
+- `appointmentReminders` controls pre-appointment notifications
+- `promotionalNotifications` allows users to receive deals/offers from salons
+- Each promotional offer is salon-specific and only valid at the salon that created it
+
+#### 5. Update User Notification Preferences ⚠️ PENDING
 ```
 ENDPOINT NOT YET AVAILABLE
 Recommended: PUT /api/auth/preferences
+```
+
+**Request Body:**
+```json
+{
+  "notificationsEnabled": true,
+  "appointmentReminders": {
+    "dayBefore": true,
+    "hourBefore": false
+  },
+  "promotionalNotifications": true
+}
 ```
 
 #### 6. Get Loyalty Points ⚠️ PENDING

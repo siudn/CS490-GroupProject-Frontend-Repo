@@ -139,7 +139,7 @@ export default function Profile() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 mb-8">
           <TabsTrigger value="profile">Profile Info</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+          <TabsTrigger value="preferences">Notifications</TabsTrigger>
           <TabsTrigger value="history">Visit History</TabsTrigger>
           <TabsTrigger value="loyalty">Loyalty Points</TabsTrigger>
         </TabsList>
@@ -300,9 +300,9 @@ export default function Profile() {
         <TabsContent value="preferences" className="space-y-6">
           <Card className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">My Preferences</h2>
+              <h2 className="text-2xl font-semibold">Notification Settings</h2>
               {!isEditingPreferences ? (
-                <Button onClick={() => setIsEditingPreferences(true)}>Edit Preferences</Button>
+                <Button onClick={() => setIsEditingPreferences(true)}>Edit Settings</Button>
               ) : (
                 <div className="space-x-2">
                   <Button onClick={handleSavePreferences} disabled={saving}>
@@ -315,127 +315,99 @@ export default function Profile() {
 
             <div className="space-y-6">
               <div>
-                <h3 className="text-lg font-semibold mb-3">Favorite Services</h3>
-                <div className="flex flex-wrap gap-2">
-                  {["haircut", "color", "blowout", "shave", "beard"].map((service) => (
-                    <button
-                      key={service}
-                      onClick={() => {
-                        if (!isEditingPreferences) return;
-                        const current = preferencesForm.favoriteServices || [];
-                        const updated = current.includes(service)
-                          ? current.filter((s) => s !== service)
-                          : [...current, service];
-                        setPreferencesForm({
-                          ...preferencesForm,
-                          favoriteServices: updated,
-                        });
-                      }}
-                      disabled={!isEditingPreferences}
-                      className={`px-4 py-2 rounded-lg border transition-colors capitalize ${
-                        (preferencesForm.favoriteServices || []).includes(service)
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white text-gray-700 border-gray-300 hover:border-gray-400"
-                      } ${!isEditingPreferences ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
-                    >
-                      {service}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Communication Preferences</h3>
-                <div className="space-y-3">
-                  <label className="flex items-center space-x-3">
+                <h3 className="text-lg font-semibold mb-4">Notification Preferences</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Manage your in-app notification settings. All notifications will appear on this website.
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Master Toggle */}
+                  <label className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <input
                       type="checkbox"
-                      checked={preferencesForm.communicationPreferences?.emailNotifications ?? true}
+                      checked={preferencesForm.notificationsEnabled ?? true}
                       onChange={(e) => setPreferencesForm({
                         ...preferencesForm,
-                        communicationPreferences: {
-                          ...preferencesForm.communicationPreferences,
-                          emailNotifications: e.target.checked,
-                        },
+                        notificationsEnabled: e.target.checked,
                       })}
                       disabled={!isEditingPreferences}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 mt-0.5"
                     />
-                    <span>Email notifications for appointments</span>
+                    <div>
+                      <span className="font-medium text-gray-900">Enable Notifications</span>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Receive in-app notifications for appointments and promotions
+                      </p>
+                    </div>
                   </label>
 
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={preferencesForm.communicationPreferences?.smsNotifications ?? true}
-                      onChange={(e) => setPreferencesForm({
-                        ...preferencesForm,
-                        communicationPreferences: {
-                          ...preferencesForm.communicationPreferences,
-                          smsNotifications: e.target.checked,
-                        },
-                      })}
-                      disabled={!isEditingPreferences}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span>SMS reminders</span>
-                  </label>
+                  {/* Show options only if notifications are enabled */}
+                  {preferencesForm.notificationsEnabled && (
+                    <div className="ml-8 space-y-4 pl-4 border-l-2 border-gray-200">
+                      {/* Appointment Reminders */}
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Appointment Reminders</h4>
+                        <div className="space-y-2">
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={preferencesForm.appointmentReminders?.dayBefore ?? true}
+                              onChange={(e) => setPreferencesForm({
+                                ...preferencesForm,
+                                appointmentReminders: {
+                                  ...preferencesForm.appointmentReminders,
+                                  dayBefore: e.target.checked,
+                                },
+                              })}
+                              disabled={!isEditingPreferences}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-gray-700">Remind me 1 day before appointment</span>
+                          </label>
 
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={preferencesForm.communicationPreferences?.promotionalEmails ?? false}
-                      onChange={(e) => setPreferencesForm({
-                        ...preferencesForm,
-                        communicationPreferences: {
-                          ...preferencesForm.communicationPreferences,
-                          promotionalEmails: e.target.checked,
-                        },
-                      })}
-                      disabled={!isEditingPreferences}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span>Promotional emails and special offers</span>
-                  </label>
-                </div>
-              </div>
+                          <label className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={preferencesForm.appointmentReminders?.hourBefore ?? true}
+                              onChange={(e) => setPreferencesForm({
+                                ...preferencesForm,
+                                appointmentReminders: {
+                                  ...preferencesForm.appointmentReminders,
+                                  hourBefore: e.target.checked,
+                                },
+                              })}
+                              disabled={!isEditingPreferences}
+                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                            />
+                            <span className="text-gray-700">Remind me 1 hour before appointment</span>
+                          </label>
+                        </div>
+                      </div>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Appointment Reminders</h3>
-                <div className="space-y-3">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={preferencesForm.appointmentReminders?.dayBefore ?? true}
-                      onChange={(e) => setPreferencesForm({
-                        ...preferencesForm,
-                        appointmentReminders: {
-                          ...preferencesForm.appointmentReminders,
-                          dayBefore: e.target.checked,
-                        },
-                      })}
-                      disabled={!isEditingPreferences}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span>Remind me 1 day before appointment</span>
-                  </label>
-
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={preferencesForm.appointmentReminders?.hourBefore ?? true}
-                      onChange={(e) => setPreferencesForm({
-                        ...preferencesForm,
-                        appointmentReminders: {
-                          ...preferencesForm.appointmentReminders,
-                          hourBefore: e.target.checked,
-                        },
-                      })}
-                      disabled={!isEditingPreferences}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                    />
-                    <span>Remind me 1 hour before appointment</span>
-                  </label>
+                      {/* Promotional Notifications */}
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Promotions & Offers</h4>
+                        <label className="flex items-start space-x-3">
+                          <input
+                            type="checkbox"
+                            checked={preferencesForm.promotionalNotifications ?? false}
+                            onChange={(e) => setPreferencesForm({
+                              ...preferencesForm,
+                              promotionalNotifications: e.target.checked,
+                            })}
+                            disabled={!isEditingPreferences}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-0.5"
+                          />
+                          <div>
+                            <span className="text-gray-700">Receive deals from salons</span>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Get notified about discounts and special offers. Each offer is valid only at the salon that sent it.
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
