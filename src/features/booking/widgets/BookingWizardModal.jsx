@@ -148,17 +148,25 @@ export default function BookingWizardModal({ salon, onClose }) {
                 />
               )}
               {!result && (
-                <div className="flex items-center justify-between gap-4">
-                  <button onClick={back} className="w-40 rounded-xl border px-4 py-2 hover:bg-gray-50">
+                <div
+                  className={`flex items-center ${step < 4 ? "justify-between" : "justify-start"} gap-4`}
+                >
+                  <button
+                    onClick={back}
+                    disabled={step === 1}
+                    className="w-40 rounded-xl border px-4 py-2 hover:bg-gray-50 disabled:opacity-40"
+                  >
                     Back
                   </button>
-                  <button
-                    onClick={step < 4 ? next : undefined}
-                    disabled={!canNext || step === 4}
-                    className="w-48 rounded-xl bg-gray-900 text-white px-4 py-2 disabled:opacity-40"
-                  >
-                    {step < 4 ? "Continue" : "Review"}
-                  </button>
+                  {step < 4 && (
+                    <button
+                      onClick={next}
+                      disabled={!canNext}
+                      className="w-48 rounded-xl bg-gray-900 text-white px-4 py-2 disabled:opacity-40"
+                    >
+                      {step === 3 ? "Review" : "Continue"}
+                    </button>
+                  )}
                 </div>
               )}
             </>

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getSalon, getSalonReviews } from "../api.js";
 import BookingWizardModal from "../widgets/BookingWizardModal.jsx";
+import { useAuth } from "../../auth/auth-provider.jsx";
 
 export default function SalonProfile() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [salon, setSalon] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewFilter, setReviewFilter] = useState("all");
@@ -67,9 +69,18 @@ export default function SalonProfile() {
   const reviewsCount = salon.reviews_count ?? reviews.length;
   const services = salon.services ?? [];
 
+  const roleBackPaths = {
+    customer: "/customer/browse",
+    owner: "/owner/dashboard",
+    salon_owner: "/owner/dashboard",
+    barber: "/barber/schedule",
+    admin: "/admin/dashboard",
+  };
+  const backPath = user ? roleBackPaths[user.role] || "/customer/browse" : "/customer/browse";
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <Link to="/booking" className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50">&larr; Back to all salons</Link>
+      <Link to={backPath} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50">&larr; Back to all salons</Link>
 
       <div className="bg-white border rounded-2xl p-5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

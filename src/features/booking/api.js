@@ -58,10 +58,8 @@ export async function listAvailability({ salonId, employeeId, serviceId, dateISO
 }
 
 export async function listUserAppointments() {
-  const [upcoming, past] = await Promise.all([
-    fetchAppointments({ when: "upcoming" }),
-    fetchAppointments({ when: "past" }),
-  ]);
+  const upcoming = await fetchAppointments({ when: "upcoming" });
+  const past = await fetchAppointments({ when: "past" });
   return { upcoming, past };
 }
 

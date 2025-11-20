@@ -7,6 +7,8 @@ export default function SalonSearch() {
   const [location, setLocation] = useState("");
   const [services, setServices] = useState([]);
   const [allServices, setAllServices] = useState([]);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [serviceLimit, setServiceLimit] = useState(10);
   const [sort, setSort] = useState("top");
   const [loading, setLoading] = useState(false);
   const [salons, setSalons] = useState([]);
@@ -49,8 +51,28 @@ export default function SalonSearch() {
     setServices((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const clearFilters = () => {
-    setQ(""); setLocation(""); setServices([]); setSort("top");
+    setQ("");
+    setLocation("");
+    setServices([]);
+    setSort("top");
+    setServiceSearch("");
+    setServiceLimit(10);
   };
+
+  useEffect(() => {
+    setServiceLimit(10);
+  }, [serviceSearch]);
+
+  const filteredServices = useMemo(() => {
+    const query = serviceSearch.trim().toLowerCase();
+    if (!query) return allServices;
+    return allServices.filter((name) => name.toLowerCase().includes(query));
+  }, [allServices, serviceSearch]);
+
+  const visibleServices = useMemo(
+    () => filteredServices.slice(0, serviceLimit),
+    [filteredServices, serviceLimit]
+  );
 
   const chips = useMemo(
     () =>
@@ -97,20 +119,42 @@ export default function SalonSearch() {
           </select>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {allServices.map((s) => (
+        <div className="mt-3 flex flex-col gap-3">
+          <input
+            value={serviceSearch}
+            onChange={(e) => setServiceSearch(e.target.value)}
+            placeholder="Search services…"
+            className="w-full rounded-lg border px-3 py-2 text-sm"
+          />
+
+          <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+            {visibleServices.map((s) => (
+              <button
+                key={s}
+                onClick={() => toggleService(s)}
+                className={`px-3 py-1 rounded-full border text-sm ${
+                  services.includes(s) ? "bg-indigo-600 text-white border-indigo-600" : "bg-white"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+            {visibleServices.length === 0 && (
+              <div className="text-sm text-gray-500">No services match your search.</div>
+            )}
+          </div>
+
+          {filteredServices.length > serviceLimit && (
             <button
-              key={s}
-              onClick={() => toggleService(s)}
-              className={`px-3 py-1 rounded-full border text-sm ${
-                services.includes(s) ? "bg-indigo-600 text-white border-indigo-600" : "bg-white"
-              }`}
+              onClick={() => setServiceLimit((prev) => prev + 10)}
+              className="text-sm font-medium text-indigo-600 self-start"
             >
-              {s}
+              Show more services
             </button>
-          ))}
-          {(services.length > 0 || q || location) && (
-            <button onClick={clearFilters} className="ml-2 text-sm text-gray-600 underline">
+          )}
+
+          {(services.length > 0 || q || location || serviceSearch) && (
+            <button onClick={clearFilters} className="text-sm text-gray-600 underline self-start">
               Clear filters
             </button>
           )}
