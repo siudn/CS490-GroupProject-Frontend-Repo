@@ -70,13 +70,13 @@ export default function SalonProfile() {
   const services = salon.services ?? [];
 
   const roleBackPaths = {
-    customer: "/customer/browse",
-    owner: "/owner/dashboard",
-    salon_owner: "/owner/dashboard",
-    barber: "/barber/schedule",
+    customer: "/browse",
+    owner: "/salon-dashboard",
+    salon_owner: "/salon-dashboard",
+    barber: "/schedule",
     admin: "/admin/dashboard",
   };
-  const backPath = user ? roleBackPaths[user.role] || "/customer/browse" : "/customer/browse";
+  const backPath = user ? roleBackPaths[user.role] || "/browse" : "/browse";
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">

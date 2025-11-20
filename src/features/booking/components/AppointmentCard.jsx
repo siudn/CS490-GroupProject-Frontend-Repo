@@ -69,7 +69,7 @@ export default function AppointmentCard({
         <div className="mt-4 flex gap-3">
           {salon.id && (
             <Link
-              to={`/customer/salon/${salon.id}`}
+              to={`/salon/${salon.id}`}
               className="rounded-xl border px-3 py-2 hover:bg-gray-50"
             >
               View Salon

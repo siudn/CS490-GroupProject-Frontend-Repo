@@ -1,16 +1,7 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "../../auth/auth-provider.jsx";
 
 export default function SalonCard({ salon }) {
-  const { user } = useAuth();
-  const rolePaths = {
-    customer: "/customer/salon",
-    owner: "/owner/salon",
-    barber: "/barber/salon",
-    admin: "/admin/salon",
-  };
-  const basePath = user ? rolePaths[user.role] || "/customer/salon" : "/customer/salon";
-  const linkTarget = `${basePath}/${salon.id}`;
+  const linkTarget = `/salon/${salon.id}`;
 
   const services = (salon.services ?? []).map((s) => (typeof s === "string" ? s : s.name)).filter(Boolean);
   const rating = salon.rating != null ? salon.rating.toFixed(1) : "New";
