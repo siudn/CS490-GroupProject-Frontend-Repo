@@ -80,7 +80,7 @@ export async function listAvailability({ salonId, employeeId, dateISO }) {
 
 export async function listUserAppointments() {
   if (import.meta.env.VITE_MOCK === "1") return MOCK_APPTS;
-  return api("/me/appointments"); // expected: { active:[], history:[] }
+  return api("/api/appointments/"); // expected: { active:[], history:[] }
 }
 
 // Create a new appointment

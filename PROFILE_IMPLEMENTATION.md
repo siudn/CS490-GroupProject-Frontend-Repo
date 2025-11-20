@@ -37,13 +37,13 @@ The customer Profile page (`src/pages/customer/Profile.jsx`) has been enhanced t
 
 The implementation uses **MOCK DATA** when `VITE_MOCK=1` is set in `.env.local`. The app will work perfectly with mock data for local development and testing.
 
-### Expected Backend Endpoints
+### Backend Endpoints - Current Status
 
-When the backend team is ready, the following endpoints should be implemented:
+#### ✅ Endpoints That EXIST:
 
 #### 1. Get User Profile
 ```
-GET /me/profile
+GET /api/auth/me
 ```
 
 **Expected Response:**
@@ -63,13 +63,13 @@ GET /me/profile
     "country": "USA"
   },
   "memberSince": "2024-01-15",
-  "profileImage": null
+  "role": "customer"
 }
 ```
 
 #### 2. Update User Profile
 ```
-PUT /me/profile
+PUT /api/auth/profile
 Content-Type: application/json
 ```
 
@@ -99,12 +99,28 @@ Content-Type: application/json
 }
 ```
 
-#### 3. Get User Preferences
+#### 3. Get User Appointments (Visit History)
 ```
-GET /me/preferences
+GET /api/appointments/
 ```
 
 **Expected Response:**
+```json
+{
+  "active": [ /* upcoming appointments */ ],
+  "history": [ /* past appointments */ ]
+}
+```
+
+#### ❌ Endpoints NOT YET IMPLEMENTED:
+
+#### 4. Get User Preferences ⚠️ PENDING
+```
+ENDPOINT NOT YET AVAILABLE
+Recommended: GET /api/auth/preferences or include in /api/auth/me response
+```
+
+**Suggested Response:**
 ```json
 {
   "favoriteServices": ["haircut", "color", "beard"],
@@ -121,43 +137,37 @@ GET /me/preferences
 }
 ```
 
-#### 4. Update User Preferences
+#### 5. Update User Preferences ⚠️ PENDING
 ```
-PUT /me/preferences
-Content-Type: application/json
+ENDPOINT NOT YET AVAILABLE
+Recommended: PUT /api/auth/preferences
 ```
 
-**Request Body:**
+#### 6. Get Loyalty Points ⚠️ PENDING
+```
+ENDPOINT NOT YET AVAILABLE
+Recommended: GET /api/loyalty/points or /api/auth/me/points
+```
+
+**Suggested Response:**
 ```json
-{
-  "favoriteServices": ["haircut", "color"],
-  "communicationPreferences": {
-    "emailNotifications": true,
-    "smsNotifications": false,
-    "promotionalEmails": true
-  },
-  "appointmentReminders": {
-    "dayBefore": true,
-    "hourBefore": false
+[
+  {
+    "salon_id": "salon-1",
+    "salon_name": "Elite Hair Studio",
+    "balance": 150,
+    "activity": [
+      {
+        "id": 1,
+        "type": "earned",
+        "points": 50,
+        "description": "Appointment completed",
+        "date": "2025-01-15"
+      }
+    ]
   }
-}
+]
 ```
-
-**Expected Response:**
-```json
-{
-  "success": true,
-  "message": "Preferences updated successfully",
-  "preferences": { /* updated preferences object */ }
-}
-```
-
-### Existing Endpoints Already Used
-
-The Profile page also integrates with existing endpoints:
-
-- **`GET /me/appointments`** - For visit history (from booking API)
-- **`GET /me/points`** - For loyalty points summary (from loyalty API)
 
 ## 📁 File Structure
 
@@ -183,19 +193,37 @@ The implementation uses existing shared UI components:
 - `Tabs` - For organizing sections
 - `Badge` - For status indicators
 
-## 🔧 How to Switch from Mock to Real API
+## 🔧 Testing with Real API
 
-When backend endpoints are ready:
+### Current Status (as of Nov 20, 2025):
 
-1. Ensure all endpoints listed above are implemented
-2. Update `.env.local` to remove or set `VITE_MOCK=0`
-3. The app will automatically start using real API endpoints
-4. Test all CRUD operations:
-   - Load profile data
-   - Update profile information
-   - Load and update preferences
-   - View appointment history
-   - View loyalty points
+| Feature | Backend Status | Works with Real API? |
+|---------|---------------|---------------------|
+| View/Edit Profile | ✅ Implemented | ✅ YES - use `VITE_MOCK=0` |
+| Visit History | ✅ Implemented | ✅ YES - use `VITE_MOCK=0` |
+| User Preferences | ❌ Not implemented | ❌ NO - uses mock data |
+| Loyalty Points | ❌ Not implemented | ❌ NO - uses mock data |
+
+### To Test with Real API:
+
+1. **For Profile & Appointments** (ready to test):
+   ```bash
+   # In .env.local
+   VITE_MOCK=0
+   VITE_API=https://cs490-groupproject-backend-production.up.railway.app
+   ```
+
+2. **For Preferences & Loyalty** (wait for backend):
+   - These features will show mock data until backend implements:
+     - `/api/auth/preferences` (GET/PUT)
+     - `/api/loyalty/points` (GET)
+
+3. **Test profile operations:**
+   - ✅ Load profile data from `/api/auth/me`
+   - ✅ Update profile information via `/api/auth/profile`
+   - ✅ View appointment history from `/api/appointments/`
+   - 🟡 Preferences (mock only for now)
+   - 🟡 Loyalty points (mock only for now)
 
 ## 🧪 Testing Recommendations
 

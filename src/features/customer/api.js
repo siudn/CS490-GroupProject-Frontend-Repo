@@ -5,7 +5,7 @@ export async function getUserProfile() {
   if (import.meta.env.VITE_MOCK === "1") {
     return MOCK_USER_PROFILE;
   }
-  return api("/me/profile");
+  return api("/api/auth/me");
 }
 
 // Update user profile information
@@ -18,21 +18,25 @@ export async function updateUserProfile(profileData) {
       profile: { ...MOCK_USER_PROFILE, ...profileData },
     };
   }
-  return api("/me/profile", {
+  return api("/api/auth/profile", {
     method: "PUT",
     body: JSON.stringify(profileData),
   });
 }
 
 // Get user preferences
+// NOTE: Backend doesn't have a dedicated preferences endpoint yet
+// This will use mock data until backend implements it
 export async function getUserPreferences() {
   if (import.meta.env.VITE_MOCK === "1") {
     return MOCK_USER_PREFERENCES;
   }
-  return api("/me/preferences");
+  // TODO: Backend needs to implement /api/auth/preferences or add to /api/auth/me
+  return MOCK_USER_PREFERENCES; // Fallback to mock for now
 }
 
 // Update user preferences
+// NOTE: Backend doesn't have a dedicated preferences endpoint yet
 export async function updateUserPreferences(preferences) {
   if (import.meta.env.VITE_MOCK === "1") {
     await new Promise((resolve) => setTimeout(resolve, 500));
@@ -42,10 +46,12 @@ export async function updateUserPreferences(preferences) {
       preferences: { ...MOCK_USER_PREFERENCES, ...preferences },
     };
   }
-  return api("/me/preferences", {
-    method: "PUT",
-    body: JSON.stringify(preferences),
-  });
+  // TODO: Backend needs to implement /api/auth/preferences
+  return {
+    success: true,
+    message: "Preferences saved locally (backend endpoint pending)",
+    preferences: { ...MOCK_USER_PREFERENCES, ...preferences },
+  };
 }
 
 /* ---------------- Mock Data ---------------- */
