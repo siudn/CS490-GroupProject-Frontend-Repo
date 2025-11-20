@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-<<<<<<< HEAD
 import { createAppointment, listAvailability, listEmployees } from "../api.js";
-=======
-import { listEmployees, listAvailability, createAppointment, processPayment } from "../api.js";
->>>>>>> dev
 
 export default function BookingWizardModal({ salon, onClose }) {
   const [step, setStep] = useState(1);
@@ -64,56 +60,12 @@ export default function BookingWizardModal({ salon, onClose }) {
     (step === 3 && !!selectedSlot) ||
     step === 4;
 
-<<<<<<< HEAD
   function next() {
     if (step < 4) setStep(step + 1);
   }
 
   function back() {
     if (step > 1) setStep(step - 1);
-=======
-  async function onConfirmPay(){
-    if (!employee || !service || !dateISO || !time) {
-      setPayStatus("fail");
-      return;
-    }
-
-    setPayStatus("proc");
-    
-    try {
-      // Step 1: Create the appointment
-      const appointment = await createAppointment({
-        salonId: salon.id,
-        employeeId: employee.id,
-        serviceId: service.id,
-        dateISO,
-        time,
-        note,
-      });
-
-      // Step 2: Process payment via Stripe (backend handles actual Stripe integration)
-      const paymentResult = await processPayment(appointment.id, {
-        paymentMethod: payMethod,
-        cardDetails: (payMethod === "card" || payMethod === "debit") ? card : undefined,
-      });
-
-      if (paymentResult.success) {
-        // Payment successful - backend will auto-award loyalty points
-        finishSuccess(appointment.id);
-      } else {
-        setPayStatus("fail");
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      setPayStatus("fail");
-    }
-  }
-
-  function finishSuccess(appointmentId) {
-    setPayStatus("ok");
-    const ref = appointmentId || "BK-" + Math.random().toString(36).slice(2,8).toUpperCase();
-    setBookingRef(ref);
->>>>>>> dev
   }
 
   async function handleConfirm() {
