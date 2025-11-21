@@ -7,20 +7,23 @@ export default function AppointmentCard({
   compact = false,
   children,
 }) {
-  const d = new Date(appt.whenISO);
+  const start = new Date(appt.start_at || appt.whenISO);
+  const salon = appt.salon || {};
+  const service = appt.service || {};
+  const barber = appt.barber || appt.employee || {};
   return (
     <div className="rounded-2xl border bg-white p-5">
       <div className="flex items-start justify-between gap-4">
         {/* LEFT: title + meta */}
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <div className="font-semibold">{appt.salon.name}</div>
+            <div className="font-semibold">{salon.name || "Salon"}</div>
             <StatusBadge status={appt.status} />
           </div>
           <div className="mt-2 grid grid-cols-[20px_1fr] gap-x-2 text-sm text-gray-700">
             <span>📅</span>
             <span>
-              {d.toLocaleDateString(undefined, {
+              {start.toLocaleDateString(undefined, {
                 month: "numeric",
                 day: "numeric",
                 year: "numeric",
@@ -28,39 +31,35 @@ export default function AppointmentCard({
             </span>
             <span>⏰</span>
             <span>
-              {d.toLocaleTimeString(undefined, {
+              {start.toLocaleTimeString(undefined, {
                 hour: "numeric",
                 minute: "2-digit",
               })}
             </span>
             <span>📍</span>
-            <span className="truncate">{appt.salon.address}</span>
+            <span className="truncate">{salon.address || "—"}</span>
           </div>
         </div>
 
         {/* RIGHT: details column */}
         <div className="w-64 text-sm">
-          <Row label="Service:" value={appt.service.name} />
-          <Row label="Barber:" value={appt.employee.name} />
-          <Row label="Price:" value={`$${appt.service.price}`} />
+          <Row label="Service:" value={service.name || "—"} />
+          <Row label="Barber:" value={barber.name || "—"} />
           <Row
-            label="Payment:"
+            label="Price:"
             value={
-              <PaymentPill
-                status={
-                  appt.paymentStatus || (appt.status === "cancelled" ? "refunded" : "paid")
-                }
-              />
+              service.price != null ? `$${Number(service.price).toFixed(2)}` : "See salon"
             }
           />
+          <Row label="Status:" value={appt.status} />
         </div>
       </div>
 
       {/* CANCELLATION REASON */}
-      {appt.status === "cancelled" && appt.cancellationReason && (
+      {appt.status === "cancelled" && appt.cancellation_reason && (
         <div className="mt-3 w-full">
             <div className="rounded-xl border bg-red-50 text-red-700 text-sm px-3 py-2">
-            Cancellation reason: {appt.cancellationReason}
+            Cancellation reason: {appt.cancellation_reason}
             </div>
         </div>
       )}
@@ -68,12 +67,14 @@ export default function AppointmentCard({
       {/* ACTIONS */}
       {!compact && appt.status !== "cancelled" && (
         <div className="mt-4 flex gap-3">
-          <Link
-            to={`/customer/salon/${appt.salon.id}`}
-            className="rounded-xl border px-3 py-2 hover:bg-gray-50"
-          >
-            View Salon
-          </Link>
+          {salon.id && (
+            <Link
+              to={`/salon/${salon.id}`}
+              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+            >
+              View Salon
+            </Link>
+          )}
           {onReschedule && (
             <button
               onClick={() => onReschedule(appt)}
@@ -104,15 +105,6 @@ function Row({ label, value }) {
       <span className="ml-2">{value}</span>
     </div>
   );
-}
-
-function PaymentPill({ status }) {
-  const map = {
-    paid: ["bg-gray-900 text-white", "paid"],
-    refunded: ["bg-gray-200 text-gray-800", "refunded"],
-  };
-  const [cls, label] = map[status] || map.paid;
-  return <span className={`px-2 py-0.5 rounded-full text-xs ${cls}`}>{label}</span>;
 }
 
 function StatusBadge({ status }) {

@@ -13,10 +13,8 @@ export default function CancelModal({ appt, onClose, onSuccess }) {
     setSaving(true);
     const res = await cancelAppointment(appt.id, msg);
     setSaving(false);
-    if (res?.ok) {
-      onSuccess({ ...appt, status: "cancelled", paymentStatus: "refunded", cancellationReason: msg });
-      onClose();
-    }
+    onSuccess(res);
+    onClose();
   }
 
   return (

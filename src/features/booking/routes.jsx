@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { RoleGate, Protected } from "../../shared/routing/Protected.jsx";
+import { RoleGate } from "../../shared/routing/RoleGate.jsx";
 
 const SalonSearch = lazy(() => import("./pages/SalonSearch.jsx"));
 const SalonProfile = lazy(() => import("./pages/SalonProfile.jsx"));
@@ -7,20 +7,20 @@ const Appointments = lazy(() => import("./pages/Appointments.jsx"));
 const VendorAppointments = lazy(() => import("./pages/VendorAppointments.jsx"));
 
 export default [
-  { 
-    path: "/booking", 
-    element: <Protected><SalonSearch /></Protected> 
+  {
+    path: "/browse",
+    element: <RoleGate allow={["customer"]}><SalonSearch /></RoleGate>,
   },
-  { 
-    path: "/booking/salon/:id", 
-    element: <Protected><SalonProfile /></Protected> 
+  {
+    path: "/salon/:id",
+    element: <RoleGate allow={["customer"]}><SalonProfile /></RoleGate>,
   },
-  { 
-    path: "/account/appointments", 
-    element: <Protected><Appointments /></Protected> 
+  {
+    path: "/appointments",
+    element: <RoleGate allow={["customer"]}><Appointments /></RoleGate>,
   },
-  { 
-    path: "/vendor/appointments", 
-    element: <RoleGate allow={["owner", "salon_owner", "barber"]}><VendorAppointments /></RoleGate> 
+  {
+    path: "/appointments/manage",
+    element: <RoleGate allow={["owner", "salon_owner", "barber"]}><VendorAppointments /></RoleGate>,
   },
 ];

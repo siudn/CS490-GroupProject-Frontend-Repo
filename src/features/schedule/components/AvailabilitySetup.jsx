@@ -6,7 +6,7 @@ import {
   fetchAvailability,
   createAvailability,
   updateAvailability,
-} from "../../features/schedule/api.js";
+} from "../api.js";
 
 const timeSlots = [
   "8:00 AM",

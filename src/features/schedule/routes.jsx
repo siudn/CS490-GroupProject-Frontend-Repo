@@ -1,5 +1,5 @@
 import { lazy } from "react";
-import { RoleGate } from "../../shared/routing/Protected.jsx";
+import { RoleGate } from "../../shared/routing/RoleGate.jsx";
 
 const ProviderDashboard = lazy(() => import("./pages/ProviderDashboard.jsx"));
 const MySchedule = lazy(() => import("./pages/MySchedule.jsx"));

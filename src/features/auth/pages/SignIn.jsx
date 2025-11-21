@@ -18,12 +18,13 @@ export default function SignIn() {
   // Redirect if already logged in
   if (user) {
     const roleRedirects = {
-      customer: "/customer/browse",
-      owner: "/owner/dashboard",
-      barber: "/barber/schedule",
+      customer: "/browse",
+      owner: "/salon-dashboard",
+      salon_owner: "/salon-dashboard",
+      barber: "/schedule",
       admin: "/admin/dashboard",
     };
-    const destination = roleRedirects[user.role] || "/customer/browse";
+    const destination = roleRedirects[user.role] || "/browse";
     navigate(destination, { replace: true });
     return null;
   }
@@ -64,14 +65,15 @@ export default function SignIn() {
       
       // Role-based redirect
       const redirectPaths = {
-        customer: "/customer/browse",
-        owner: "/owner/dashboard",
-        barber: "/barber/schedule",
-        admin: "/admin/dashboard"
+        customer: "/browse",
+        owner: "/salon-dashboard",
+        salon_owner: "/salon-dashboard",
+        barber: "/schedule",
+        admin: "/admin/dashboard",
       };
-      
+
       setTimeout(() => {
-        navigate(redirectPaths[userData.role] || "/customer/browse");
+        navigate(redirectPaths[userData.role] || "/browse");
       }, 1000);
     } catch (error) {
       setErrors({ submit: error.message || "Invalid email or password" });
@@ -104,14 +106,15 @@ export default function SignIn() {
       
       // Role-based redirect
       const redirectPaths = {
-        customer: "/customer/browse",
-        owner: "/owner/dashboard",
-        barber: "/barber/schedule",
-        admin: "/admin/dashboard"
+        customer: "/browse",
+        owner: "/salon-dashboard",
+        salon_owner: "/salon-dashboard",
+        barber: "/schedule",
+        admin: "/admin/dashboard",
       };
-      
+
       setTimeout(() => {
-        navigate(redirectPaths[userData.role] || "/customer/browse");
+        navigate(redirectPaths[userData.role] || "/browse");
       }, 1000);
     } catch (error) {
       setErrors({ submit: "Demo login failed" });
