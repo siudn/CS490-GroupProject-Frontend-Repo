@@ -66,10 +66,10 @@ export default function AuthCallback() {
       // If user is already logged in, redirect to their dashboard
       if (user) {
         const roleRedirects = {
-          customer: "/customer/browse",
-          owner: "/owner/dashboard",
-          salon_owner: "/owner/dashboard",
-          barber: "/barber/schedule",
+          customer: "/browse",
+          owner: "/salon-dashboard",
+          salon_owner: "/salon-dashboard",
+          barber: "/schedule",
           admin: "/admin/dashboard",
         };
         navigate(roleRedirects[user.role] || "/");
@@ -132,4 +132,3 @@ export default function AuthCallback() {
     </div>
   );
 }
-

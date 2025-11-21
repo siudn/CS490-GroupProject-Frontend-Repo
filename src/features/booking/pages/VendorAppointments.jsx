@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { listVendorRequests, vendorConfirm } from "../api.js";
 import VendorRequestCard from "../components/VendorRequestCard.jsx";
 import VendorDenyModal from "../widgets/VendorDenyModal.jsx";
@@ -9,39 +9,30 @@ export default function VendorAppointments() {
   const [err, setErr] = useState("");
   const [denyItem, setDenyItem] = useState(null);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const res = await listVendorRequests();
-        if (alive) setData(res);
-      } catch (e) {
-        if (alive) setErr("Failed to load vendor appointments.");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-    return () => { alive = false; };
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await listVendorRequests();
+      setData(res);
+      setErr("");
+    } catch (e) {
+      setErr("Failed to load vendor appointments.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function onConfirm(item) {
     await vendorConfirm(item.id, "Confirmed by vendor");
-    setData(({ pending, upcoming, denied }) => ({
-      pending: pending.filter(p => p.id !== item.id),
-      upcoming: [{ ...item, status: "confirmed" }, ...upcoming],
-      denied,
-    }));
+    load();
   }
 
   function onDeny(item) { setDenyItem(item); }
-  function applyDenied(updated) {
-    setData(({ pending, upcoming, denied }) => ({
-      pending: pending.filter(p => p.id !== updated.id),
-      upcoming,
-      denied: [{ ...updated }, ...denied],
-    }));
-  }
+  const applyDenied = () => load();
 
   if (loading) return <div className="max-w-6xl mx-auto p-6 text-gray-600">Loading…</div>;
   if (err) return <div className="max-w-6xl mx-auto p-6 text-red-600">{err}</div>;

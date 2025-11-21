@@ -7,8 +7,9 @@ export default function SalonSearch() {
   const [location, setLocation] = useState("");
   const [services, setServices] = useState([]);
   const [allServices, setAllServices] = useState([]);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [serviceLimit, setServiceLimit] = useState(10);
   const [sort, setSort] = useState("top");
-  const [coords, setCoords] = useState(null);
   const [loading, setLoading] = useState(false);
   const [salons, setSalons] = useState([]);
 
@@ -28,31 +29,15 @@ export default function SalonSearch() {
   }, [q]);
 
   useEffect(() => {
-    if (sort === "nearby" && !coords) {
-      if (!("geolocation" in navigator)) {
-        alert("Your browser doesn’t support location services.");
-        setSort("top");
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => { alert("Location permission denied or unavailable."); setSort("top"); },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }
-  }, [sort, coords]);
-
-  useEffect(() => {
     let alive = true;
     (async () => {
       setLoading(true);
       try {
         const data = await listSalons({
           q: qDebounced,
-          location: sort === "nearby" && coords ? "" : location,
+          location,
           services,
           sort,
-          coords: sort === "nearby" ? coords : null,
         });
         if (alive) setSalons(data);
       } finally {
@@ -60,14 +45,34 @@ export default function SalonSearch() {
       }
     })();
     return () => { alive = false; };
-  }, [qDebounced, location, services, sort, coords]);
+  }, [qDebounced, location, services, sort]);
 
   const toggleService = (s) =>
     setServices((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
 
   const clearFilters = () => {
-    setQ(""); setLocation(""); setServices([]); setSort("top"); setCoords(null);
+    setQ("");
+    setLocation("");
+    setServices([]);
+    setSort("top");
+    setServiceSearch("");
+    setServiceLimit(10);
   };
+
+  useEffect(() => {
+    setServiceLimit(10);
+  }, [serviceSearch]);
+
+  const filteredServices = useMemo(() => {
+    const query = serviceSearch.trim().toLowerCase();
+    if (!query) return allServices;
+    return allServices.filter((name) => name.toLowerCase().includes(query));
+  }, [allServices, serviceSearch]);
+
+  const visibleServices = useMemo(
+    () => filteredServices.slice(0, serviceLimit),
+    [filteredServices, serviceLimit]
+  );
 
   const chips = useMemo(
     () =>
@@ -100,40 +105,56 @@ export default function SalonSearch() {
           />
           <input
             value={location}
-            onChange={(e) => { setLocation(e.target.value); setCoords(null); }}
+            onChange={(e) => setLocation(e.target.value)}
             placeholder="Location (city, zip)…"
             className="md:col-span-4 w-full rounded-lg border px-3 py-2"
-            disabled={sort === "nearby"}
-            title={sort === "nearby" ? "Using your current location" : ""}
           />
           <select
             value={sort}
-            onChange={(e) => {
-              const v = e.target.value;
-              setSort(v);
-              if (v === "top") setCoords(null);
-            }}
+            onChange={(e) => setSort(e.target.value)}
             className="md:col-span-3 w-full rounded-lg border px-3 py-2"
           >
             <option value="top">Top Rated</option>
-            <option value="nearby">Nearby</option>
+            <option value="recent">Recently Added</option>
           </select>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          {allServices.map((s) => (
+        <div className="mt-3 flex flex-col gap-3">
+          <input
+            value={serviceSearch}
+            onChange={(e) => setServiceSearch(e.target.value)}
+            placeholder="Search services…"
+            className="w-full rounded-lg border px-3 py-2 text-sm"
+          />
+
+          <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+            {visibleServices.map((s) => (
+              <button
+                key={s}
+                onClick={() => toggleService(s)}
+                className={`px-3 py-1 rounded-full border text-sm ${
+                  services.includes(s) ? "bg-indigo-600 text-white border-indigo-600" : "bg-white"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+            {visibleServices.length === 0 && (
+              <div className="text-sm text-gray-500">No services match your search.</div>
+            )}
+          </div>
+
+          {filteredServices.length > serviceLimit && (
             <button
-              key={s}
-              onClick={() => toggleService(s)}
-              className={`px-3 py-1 rounded-full border text-sm ${
-                services.includes(s) ? "bg-indigo-600 text-white border-indigo-600" : "bg-white"
-              }`}
+              onClick={() => setServiceLimit((prev) => prev + 10)}
+              className="text-sm font-medium text-indigo-600 self-start"
             >
-              {s}
+              Show more services
             </button>
-          ))}
-          {(services.length > 0 || coords || q || location) && (
-            <button onClick={clearFilters} className="ml-2 text-sm text-gray-600 underline">
+          )}
+
+          {(services.length > 0 || q || location || serviceSearch) && (
+            <button onClick={clearFilters} className="text-sm text-gray-600 underline self-start">
               Clear filters
             </button>
           )}
@@ -149,7 +170,7 @@ export default function SalonSearch() {
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {salons.map((s) => (
-            <SalonCard key={s.id} salon={s} userCoords={coords} />
+            <SalonCard key={s.id} salon={s} />
           ))}
         </div>
       )}

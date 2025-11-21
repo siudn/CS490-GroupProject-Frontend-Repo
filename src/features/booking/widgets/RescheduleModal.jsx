@@ -2,32 +2,41 @@ import { useEffect, useMemo, useState } from "react";
 import { listAvailability, rescheduleAppointment } from "../api.js";
 
 export default function RescheduleModal({ appt, onClose, onSuccess }) {
-  const [dateISO, setDateISO] = useState(toISO(new Date(appt.whenISO)));
+  const [dateISO, setDateISO] = useState(toISO(new Date(appt.start_at || appt.whenISO)));
   const [slots, setSlots] = useState([]);
-  const [time, setTime] = useState(null);
+  const [slot, setSlot] = useState(null);
   const [saving, setSaving] = useState(false);
+  const serviceId = appt.service?.id || appt.service_id;
 
   useEffect(() => {
+    if (!serviceId) return;
+    let alive = true;
     (async () => {
       const s = await listAvailability({
-        salonId: appt.salon.id,
-        employeeId: appt.employee.id,
+        salonId: appt.salon_id || appt.salon?.id,
+        employeeId: appt.barber_id || appt.employee?.id,
+        serviceId,
         dateISO,
       });
+      if (!alive) return;
       setSlots(s);
-      setTime(null);
+      setSlot(null);
     })();
-  }, [appt.salon.id, appt.employee.id, dateISO]);
+    return () => { alive = false; };
+  }, [appt.salon?.id, appt.employee?.id, appt.salon_id, appt.barber_id, dateISO, serviceId]);
 
   async function confirm() {
-    if (!time) return;
+    if (!slot) return;
     setSaving(true);
-    const res = await rescheduleAppointment(appt.id, { dateISO, time });
+    const res = await rescheduleAppointment(appt.id, {
+      salon_id: appt.salon_id || appt.salon?.id,
+      barber_id: appt.barber_id || appt.employee?.id,
+      start_at: slot.start_at,
+      end_at: slot.end_at,
+    });
     setSaving(false);
-    if (res?.ok) {
-      onSuccess({ ...appt, whenISO: res.updated.whenISO, status: "confirmed" });
-      onClose();
-    }
+    onSuccess(res);
+    onClose();
   }
 
   return (
@@ -35,12 +44,12 @@ export default function RescheduleModal({ appt, onClose, onSuccess }) {
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute inset-x-0 top-16 mx-auto w-[min(760px,92vw)] rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between p-4 border-b">
-          <div className="font-semibold">Reschedule • {appt.salon.name}</div>
+          <div className="font-semibold">Reschedule • {appt.salon?.name}</div>
           <button onClick={onClose} className="rounded-md border px-3 py-1 hover:bg-gray-50">Close</button>
         </div>
         <div className="p-6 space-y-6">
           <div className="text-sm text-gray-600">
-            Current: {new Date(appt.whenISO).toLocaleString()}
+            Current: {new Date(appt.start_at || appt.whenISO).toLocaleString()}
           </div>
 
           <div className="flex flex-wrap gap-6">
@@ -52,21 +61,18 @@ export default function RescheduleModal({ appt, onClose, onSuccess }) {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {slots.map((s) => (
                   <button
-                    key={s.time}
-                    onClick={() => s.status === "free" && setTime(s.time)}
-                    disabled={s.status !== "free"}
+                    key={s.start_at}
+                    onClick={() => setSlot(s)}
                     className={`rounded-xl border px-4 py-2 text-sm ${
-                      s.status === "free"
-                        ? "hover:bg-gray-50"
-                        : s.status === "booked"
-                        ? "bg-gray-100 text-gray-400"
-                        : "bg-gray-200 text-gray-400"
-                    } ${time === s.time ? "ring-2 ring-violet-600 border-violet-600" : ""}`}
-                    title={s.status === "blocked" ? "Blocked" : s.status === "booked" ? "Booked" : "Available"}
+                      slot?.start_at === s.start_at ? "ring-2 ring-violet-600 border-violet-600" : "hover:bg-gray-50"
+                    }`}
                   >
-                    {toFriendlyTime(s.time)}
+                    {s.label || new Date(s.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                   </button>
                 ))}
+                {slots.length === 0 && (
+                  <div className="text-sm text-gray-500 col-span-full">No openings for this day.</div>
+                )}
               </div>
             </div>
           </div>
@@ -75,7 +81,7 @@ export default function RescheduleModal({ appt, onClose, onSuccess }) {
             <button onClick={onClose} className="rounded-xl border px-4 py-2 hover:bg-gray-50">Cancel</button>
             <button
               onClick={confirm}
-              disabled={!time || saving}
+              disabled={!slot || saving}
               className="rounded-xl bg-gray-900 text-white px-4 py-2 disabled:opacity-40"
             >
               {saving ? "Saving…" : "Confirm New Time"}

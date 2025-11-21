@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getSalon, getSalonReviews } from "../api.js";
 import BookingWizardModal from "../widgets/BookingWizardModal.jsx";
+import { useAuth } from "../../auth/auth-provider.jsx";
 
 export default function SalonProfile() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [salon, setSalon] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [reviewFilter, setReviewFilter] = useState("all");
@@ -60,22 +62,42 @@ export default function SalonProfile() {
   if (loading) return <div className="max-w-6xl mx-auto p-6 text-gray-600">Loading…</div>;
   if (!salon) return <div className="max-w-6xl mx-auto p-6 text-red-600">Salon not found.</div>;
 
+  const heroImage =
+    salon.logo_url ||
+    "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=900&q=80";
+  const ratingValue = salon.rating ?? 0;
+  const reviewsCount = salon.reviews_count ?? reviews.length;
+  const services = salon.services ?? [];
+
+  const roleBackPaths = {
+    customer: "/browse",
+    owner: "/salon-dashboard",
+    salon_owner: "/salon-dashboard",
+    barber: "/schedule",
+    admin: "/admin/dashboard",
+  };
+  const backPath = user ? roleBackPaths[user.role] || "/browse" : "/browse";
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <Link to="/booking" className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50">&larr; Back to all salons</Link>
+      <Link to={backPath} className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm hover:bg-gray-50">&larr; Back to all salons</Link>
 
       <div className="bg-white border rounded-2xl p-5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <img src={salon.img} alt={salon.name} className="rounded-xl w-full h-56 object-cover md:col-span-1" />
+          <img src={heroImage} alt={salon.name} className="rounded-xl w-full h-56 object-cover md:col-span-1" />
           <div className="md:col-span-2 space-y-2">
             <h1 className="text-2xl font-semibold">{salon.name}</h1>
             <div className="flex items-center gap-3 text-sm text-gray-700">
-              <span>⭐ {salon.rating}</span>
-              <span>({salon.reviewsCount} reviews)</span>
+              <span>⭐ {ratingValue ? ratingValue.toFixed(1) : "New"}</span>
+              <span>({reviewsCount} reviews)</span>
             </div>
             <div className="text-sm text-gray-600 flex items-center gap-2">📍 {salon.address}</div>
-            <div className="text-sm text-gray-600 flex items-center gap-2">🕘 {salon.hours}</div>
-            <p className="pt-2 text-gray-700">{salon.blurb}</p>
+            {Array.isArray(salon.hours) && salon.hours.length > 0 && (
+              <div className="text-sm text-gray-600 flex items-center gap-2">
+                🕘 {salon.hours.map((row) => formatHourRange(row)).join(" • ")}
+              </div>
+            )}
+            {salon.description && <p className="pt-2 text-gray-700">{salon.description}</p>}
           </div>
         </div>
 
@@ -89,19 +111,56 @@ export default function SalonProfile() {
 
         <h2 className="mt-6 text-lg font-semibold">Available Services</h2>
         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {salon.services.map((svc) => (
+          {services.length === 0 && (
+            <div className="rounded-xl border bg-gray-50 text-gray-600 p-4 text-sm">
+              Services have not been published yet. Check back soon.
+            </div>
+          )}
+          {services.map((svc) => (
             <div
               key={svc.id}
               className="flex items-center justify-between rounded-xl border px-4 py-3 bg-white"
             >
               <div>
                 <div className="font-medium">{svc.name}</div>
-                <div className="text-sm text-gray-500">{svc.durationMin} min</div>
+                <div className="text-sm text-gray-500">
+                  {svc.duration_minutes ? `${svc.duration_minutes} min` : "Duration varies"}
+                </div>
               </div>
-              <div className="text-gray-800 font-semibold">${svc.price}</div>
+              <div className="text-gray-800 font-semibold">
+                {svc.price != null ? `$${Number(svc.price).toFixed(2)}` : "See salon"}
+              </div>
             </div>
           ))}
         </div>
+
+        <h2 className="mt-8 text-lg font-semibold">Meet the Team</h2>
+        {salon.employees?.length ? (
+          <div className="mt-3 grid gap-4 md:grid-cols-2">
+            {salon.employees.map((emp) => (
+              <div key={emp.id} className="flex items-center gap-4 rounded-xl border p-4 bg-white">
+                <img
+                  src={emp.avatar || "https://placehold.co/96x96?text=Staff"}
+                  alt={emp.name}
+                  className="h-16 w-16 rounded-full object-cover border"
+                />
+                <div className="space-y-1 text-sm text-gray-700">
+                  <div className="text-base font-medium text-gray-900">{emp.name}</div>
+                  {emp.years_experience != null && (
+                    <div>{emp.years_experience} yrs experience</div>
+                  )}
+                  <div className="capitalize">
+                    Status: {emp.is_active ? "Available" : "Inactive"}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-gray-600">
+            This salon hasn’t published its team yet. Start a booking to see available staff.
+          </p>
+        )}
 
         <button
             onClick={() => setOpenWizard(true)}
@@ -118,7 +177,7 @@ export default function SalonProfile() {
       <ReviewSection
         salon={salon}
         reviews={filteredReviews}
-        totalReviews={salon.reviewsCount ?? reviews.length}
+        totalReviews={reviewsCount}
         distribution={distribution}
         activeFilter={reviewFilter}
         onFilterChange={setReviewFilter}
@@ -220,10 +279,13 @@ function Review({ review }) {
   return (
     <div className="rounded-xl border p-4 bg-white">
       <div className="flex items-center justify-between">
-        <div className="font-medium">{review.user}</div>
-        <div className="text-yellow-500">{'★'.repeat(review.stars)}<span className="text-gray-300">{'★'.repeat(5 - review.stars)}</span></div>
+        <div className="font-medium">{review.user?.name || "Guest"}</div>
+        <div className="text-yellow-500">
+          {"★".repeat(review.stars)}
+          <span className="text-gray-300">{"★".repeat(5 - review.stars)}</span>
+        </div>
       </div>
-      <p className="mt-2 text-gray-700 text-sm">{review.text}</p>
+      <p className="mt-2 text-gray-700 text-sm">{review.text || "No written feedback."}</p>
     </div>
   );
 }
@@ -268,4 +330,18 @@ function FilterButton({ label, active, onClick, disabled }) {
       {label}
     </button>
   );
+}
+
+function formatHourRange(row) {
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const label = days[row?.day_of_week ?? 0];
+  if (row?.is_closed) return `${label}: Closed`;
+  const pretty = (value) => {
+    if (!value) return "";
+    const [h, m] = value.split(":");
+    const dt = new Date();
+    dt.setHours(Number(h), Number(m || 0), 0, 0);
+    return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+  return `${label}: ${pretty(row?.open_time)} - ${pretty(row?.close_time)}`;
 }
