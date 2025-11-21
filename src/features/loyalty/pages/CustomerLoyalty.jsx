@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Button } from "../../shared/ui/button";
-import { getCustomerPoints, getLoyaltyRewards, redeemPoints } from "../../features/loyalty/api.js";
+import { Button } from "../../../shared/ui/button";
+import { getCustomerPoints, getLoyaltyRewards, redeemPoints } from "../api.js";
 
 export default function Loyalty() {
   const [salonBalances, setSalonBalances] = useState([]); // Array of { salon_id, salon_name, balance, activity }

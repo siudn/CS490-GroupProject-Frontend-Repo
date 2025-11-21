@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Button } from "../../shared/ui/button";
-import { Input } from "../../shared/ui/input";
+import { Button } from "../../../shared/ui/button.jsx";
+import { Input } from "../../../shared/ui/input.jsx";
 import {
   Table,
   TableBody,
@@ -8,8 +8,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../shared/ui/table";
-import { getPaymentHistory } from "../../features/loyalty/api.js";
+} from "../../../shared/ui/table.jsx";
+import { getPaymentHistory } from "../../loyalty/api.js";
 
 export default function Payments() {
   const [payments, setPayments] = useState([]);

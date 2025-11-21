@@ -93,12 +93,13 @@ export default function SignUp() {
           
           // Role-based redirect
           const redirectPaths = {
-            customer: "/booking",
-            owner: "/salon/register",
+            customer: "/browse",
+            owner: "/salon-registration",
+            salon_owner: "/salon-registration",
             barber: "/schedule",
-            admin: "/salon/admin/verify"
+            admin: "/admin/verify",
           };
-          navigate(redirectPaths[formData.accountType] || "/booking");
+          navigate(redirectPaths[formData.accountType] || "/browse");
         }, 2000);
       } else {
         // Real API call

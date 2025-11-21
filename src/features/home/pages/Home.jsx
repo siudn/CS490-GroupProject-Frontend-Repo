@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../features/auth/auth-provider";
-import salonicaLogo from "../assets/salonica.png";
+import { useAuth } from "../../auth/auth-provider.jsx";
+import salonicaLogo from "../../../assets/salonica.png";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export default function Home() {
     if (!user) {
       navigate("/auth/sign-in");
     } else {
-      navigate(`/customer/browse?q=${encodeURIComponent(searchQuery)}`);
+      navigate(`/browse?q=${encodeURIComponent(searchQuery)}`);
     }
   };
 
@@ -21,13 +21,13 @@ export default function Home() {
     if (user) {
       // Redirect based on role
       const roleRedirects = {
-        customer: "/customer/browse",
-        owner: "/owner/dashboard",
-        salon_owner: "/owner/dashboard",
-        barber: "/barber/schedule",
+        customer: "/browse",
+        owner: "/salon-dashboard",
+        salon_owner: "/salon-dashboard",
+        barber: "/schedule",
         admin: "/admin/dashboard",
       };
-      navigate(roleRedirects[user.role] || "/customer/browse");
+      navigate(roleRedirects[user.role] || "/browse");
     } else {
       navigate("/auth/sign-up");
     }
@@ -47,13 +47,13 @@ export default function Home() {
     if (user) {
       // Already logged in, redirect based on role
       const roleRedirects = {
-        customer: "/customer/browse",
-        owner: "/owner/dashboard",
-        salon_owner: "/owner/dashboard",
-        barber: "/barber/schedule",
+        customer: "/browse",
+        owner: "/salon-dashboard",
+        salon_owner: "/salon-dashboard",
+        barber: "/schedule",
         admin: "/admin/dashboard",
       };
-      navigate(roleRedirects[user.role] || "/customer/browse");
+      navigate(roleRedirects[user.role] || "/browse");
     } else {
       navigate(`/auth/sign-up?type=${accountType}`);
     }
@@ -112,7 +112,7 @@ export default function Home() {
                 {user ? "Go to Dashboard" : "Get Started Free"}
               </button>
             <button
-              onClick={() => user ? navigate("/customer/browse") : navigate("/auth/sign-in")}
+              onClick={() => user ? navigate("/browse") : navigate("/auth/sign-in")}
               className="px-8 py-4 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-50 transition-all border-2 border-gray-200"
             >
               {user ? "Browse Salons" : "Sign In to Browse"}
@@ -509,7 +509,7 @@ export default function Home() {
               Get Started Free
             </button>
             <button
-              onClick={() => user ? navigate("/customer/browse") : navigate("/auth/sign-in")}
+              onClick={() => user ? navigate("/browse") : navigate("/auth/sign-in")}
               className="px-8 py-4 bg-transparent text-white font-semibold rounded-xl border-2 border-white hover:bg-white/10 transition-all text-lg"
             >
               {user ? "Explore Salons" : "Sign In to Explore"}
@@ -539,22 +539,22 @@ export default function Home() {
               <h4 className="font-semibold text-white mb-4">For Customers</h4>
               <ul className="space-y-2">
                 <li>
-                  <button onClick={() => handleProtectedNavigation("/customer/browse")} className="hover:text-white transition-colors">
+                  <button onClick={() => handleProtectedNavigation("/browse")} className="hover:text-white transition-colors">
                     Browse Salons
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleProtectedNavigation("/customer/appointments")} className="hover:text-white transition-colors">
+                  <button onClick={() => handleProtectedNavigation("/appointments")} className="hover:text-white transition-colors">
                     My Appointments
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleProtectedNavigation("/customer/loyalty")} className="hover:text-white transition-colors">
+                  <button onClick={() => handleProtectedNavigation("/rewards")} className="hover:text-white transition-colors">
                     Rewards Program
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleProtectedNavigation("/customer/profile")} className="hover:text-white transition-colors">
+                  <button onClick={() => handleProtectedNavigation("/profile")} className="hover:text-white transition-colors">
                     My Profile
                   </button>
                 </li>
@@ -566,17 +566,17 @@ export default function Home() {
               <h4 className="font-semibold text-white mb-4">For Business</h4>
               <ul className="space-y-2">
                 <li>
-                  <button onClick={() => handleProtectedNavigation("/salon/register")} className="hover:text-white transition-colors">
+                  <button onClick={() => handleProtectedNavigation("/salon-registration")} className="hover:text-white transition-colors">
                     Register Your Salon
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleProtectedNavigation("/owner/dashboard")} className="hover:text-white transition-colors">
+                  <button onClick={() => handleProtectedNavigation("/salon-dashboard")} className="hover:text-white transition-colors">
                     Owner Dashboard
                   </button>
                 </li>
                 <li>
-                  <button onClick={() => handleProtectedNavigation("/barber/schedule")} className="hover:text-white transition-colors">
+                  <button onClick={() => handleProtectedNavigation("/schedule")} className="hover:text-white transition-colors">
                     Barber Portal
                   </button>
                 </li>

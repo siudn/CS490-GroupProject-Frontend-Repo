@@ -1,89 +1,94 @@
 import { useEffect, useMemo, useState } from "react";
-import { listEmployees, listAvailability, createAppointment, processPayment } from "../api.js";
+import { createAppointment, listAvailability, listEmployees } from "../api.js";
 
 export default function BookingWizardModal({ salon, onClose }) {
   const [step, setStep] = useState(1);
   const [employee, setEmployee] = useState(null);
-  const [service, setService]   = useState(null);
-  const [dateISO, setDateISO]   = useState(toISO(new Date()));
-  const [slots, setSlots]       = useState([]);
-  const [time, setTime]         = useState(null);
-  const [note, setNote]         = useState("");
-
-  const [payMethod, setPayMethod] = useState(null); // 'card' | 'debit' | 'paypal'
-  const [card, setCard] = useState({ number:"", name:"", exp:"", cvv:"" });
-  const [payStatus, setPayStatus] = useState("idle"); // 'idle'|'proc'|'ok'|'fail'
-  const [bookingRef, setBookingRef] = useState(null);
-
-  const [employees, setEmployees] = useState([]);
-  useEffect(() => { (async () => setEmployees(await listEmployees(salon.id)))(); }, [salon.id]);
+  const [service, setService] = useState(null);
+  const [dateISO, setDateISO] = useState(toISO(new Date()));
+  const [slots, setSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+  const [employees, setEmployees] = useState(salon.employees ?? []);
+  const services = salon.services ?? [];
 
   useEffect(() => {
-    if (!employee || !dateISO) return;
+    if (salon.employees) return;
     (async () => {
-      const data = await listAvailability({ salonId: salon.id, employeeId: employee.id, dateISO });
-      setSlots(data);
-      setTime(null);
+      try {
+        const rows = await listEmployees(salon.id);
+        setEmployees(rows);
+      } catch (err) {
+        console.error(err);
+      }
     })();
-  }, [salon.id, employee, dateISO]);
+  }, [salon]);
 
-  const progress = useMemo(() => step / 5 * 100, [step]);
-  function next(){ if (step < 5) setStep(step+1); }
-  function back(){ if (step > 1) setStep(step-1); }
+  useEffect(() => {
+    if (!employee || !service || !dateISO) return;
+    let alive = true;
+    setSelectedSlot(null);
+    setSlots([]);
+    setError("");
+    (async () => {
+      try {
+        const data = await listAvailability({
+          salonId: salon.id,
+          employeeId: employee.id,
+          serviceId: service.id,
+          dateISO,
+        });
+        if (alive) setSlots(data);
+      } catch (err) {
+        if (alive) setError("Unable to load availability for that day.");
+      }
+    })();
+    return () => { alive = false; };
+  }, [salon.id, employee, service, dateISO]);
+
+  const progress = useMemo(() => {
+    if (result) return 100;
+    return Math.round((step / 4) * 100);
+  }, [step, result]);
 
   const canNext =
     (step === 1 && !!employee) ||
     (step === 2 && !!service) ||
-    (step === 3 && !!time) ||
-    (step === 4) ||
-    (step === 5 && payStatus === "ok");
+    (step === 3 && !!selectedSlot) ||
+    step === 4;
 
-  async function onConfirmPay(){
-    if (!employee || !service || !dateISO || !time) {
-      setPayStatus("fail");
-      return;
-    }
+  function next() {
+    if (step < 4) setStep(step + 1);
+  }
 
-    setPayStatus("proc");
-    
+  function back() {
+    if (step > 1) setStep(step - 1);
+  }
+
+  async function handleConfirm() {
+    if (!employee || !service || !selectedSlot) return;
+    setSaving(true);
+    setError("");
     try {
-      // Step 1: Create the appointment
-      const appointment = await createAppointment({
-        salonId: salon.id,
-        employeeId: employee.id,
-        serviceId: service.id,
-        dateISO,
-        time,
-        note,
-      });
-
-      // Step 2: Process payment via Stripe (backend handles actual Stripe integration)
-      const paymentResult = await processPayment(appointment.id, {
-        paymentMethod: payMethod,
-        cardDetails: (payMethod === "card" || payMethod === "debit") ? card : undefined,
-      });
-
-      if (paymentResult.success) {
-        // Payment successful - backend will auto-award loyalty points
-        finishSuccess(appointment.id);
-      } else {
-        setPayStatus("fail");
-      }
-    } catch (error) {
-      console.error("Payment error:", error);
-      setPayStatus("fail");
+      const payload = {
+        barber_id: employee.id,
+        service_id: service.id,
+        salon_id: salon.id,
+        start_at: selectedSlot.start_at,
+        end_at: selectedSlot.end_at,
+        notes: note || undefined,
+      };
+      const created = await createAppointment(payload);
+      setResult(created);
+    } catch (err) {
+      setError(err.message || "Failed to create appointment.");
+    } finally {
+      setSaving(false);
     }
   }
-
-  function finishSuccess(appointmentId) {
-    setPayStatus("ok");
-    const ref = appointmentId || "BK-" + Math.random().toString(36).slice(2,8).toUpperCase();
-    setBookingRef(ref);
-  }
-
-  const total = service?.price ?? 0;
-
-  const showSummary = step === 5 && payStatus === "ok";
 
   return (
     <div className="fixed inset-0 z-50">
@@ -92,7 +97,9 @@ export default function BookingWizardModal({ salon, onClose }) {
         <div className="flex items-center justify-between p-4 border-b">
           <div>
             <div className="text-lg font-semibold">Book an Appointment</div>
-            <div className="text-sm text-gray-600">Step {step} of 5</div>
+            <div className="text-sm text-gray-600">
+              {result ? "Confirmed" : `Step ${step} of 4`}
+            </div>
           </div>
           <button onClick={onClose} className="rounded-md px-3 py-1 border hover:bg-gray-50">Close</button>
         </div>
@@ -103,51 +110,66 @@ export default function BookingWizardModal({ salon, onClose }) {
           </div>
         </div>
 
-        <div className="p-6">
-          {step === 1 && <Step1SelectEmployee employees={employees} value={employee} onChange={setEmployee} />}
-          {step === 2 && <Step2SelectService services={salon.services} value={service} onChange={setService} />}
-          {step === 3 && (
-            <Step3DateTime
-              dateISO={dateISO} onDateISO={setDateISO}
-              slots={slots} time={time} onTime={setTime}
-            />
-          )}
-          {step === 4 && (
-            <Step4Details
-              note={note} onNote={setNote}
-              employee={employee} service={service} dateISO={dateISO} time={time}
-            />
-          )}
-          {step === 5 && !showSummary && (
-            <Step5Payment
-              total={total}
-              payMethod={payMethod}
-              setPayMethod={setPayMethod}
-              card={card}
-              setCard={setCard}
-              payStatus={payStatus}
-              onConfirmPay={onConfirmPay}
-            />
-          )}
-          {showSummary && (
-            <ConfirmationSummary
-              salon={salon} employee={employee} service={service}
-              dateISO={dateISO} time={time} note={note}
-              total={total} bookingRef={bookingRef} onClose={onClose}
-            />
-          )}
-
-          {!showSummary && (
-            <div className="mt-6 flex items-center gap-3 justify-between">
-              <button onClick={back} className="w-40 rounded-xl border px-4 py-2 hover:bg-gray-50">Back</button>
-              <button
-                onClick={step < 5 ? next : undefined}
-                disabled={!canNext || step === 5}
-                className="w-48 rounded-xl bg-gray-900 text-white px-4 py-2 disabled:opacity-40"
-              >
-                {step < 5 ? "Continue" : "Continue"}
-              </button>
-            </div>
+        <div className="p-6 space-y-6">
+          {result ? (
+            <ConfirmationSummary appointment={result} onClose={onClose} />
+          ) : (
+            <>
+              {step === 1 && (
+                <Step1SelectEmployee
+                  employees={employees}
+                  value={employee}
+                  onChange={setEmployee}
+                />
+              )}
+              {step === 2 && (
+                <Step2SelectService services={services} value={service} onChange={setService} />
+              )}
+              {step === 3 && (
+                <Step3DateTime
+                  dateISO={dateISO}
+                  onDateISO={setDateISO}
+                  slots={slots}
+                  slot={selectedSlot}
+                  onSelect={setSelectedSlot}
+                  error={error}
+                />
+              )}
+              {step === 4 && (
+                <Step4Review
+                  employee={employee}
+                  service={service}
+                  slot={selectedSlot}
+                  note={note}
+                  onNote={setNote}
+                  error={error}
+                  saving={saving}
+                  onConfirm={handleConfirm}
+                />
+              )}
+              {!result && (
+                <div
+                  className={`flex items-center ${step < 4 ? "justify-between" : "justify-start"} gap-4`}
+                >
+                  <button
+                    onClick={back}
+                    disabled={step === 1}
+                    className="w-40 rounded-xl border px-4 py-2 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    Back
+                  </button>
+                  {step < 4 && (
+                    <button
+                      onClick={next}
+                      disabled={!canNext}
+                      className="w-48 rounded-xl bg-gray-900 text-white px-4 py-2 disabled:opacity-40"
+                    >
+                      {step === 3 ? "Review" : "Continue"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -156,6 +178,9 @@ export default function BookingWizardModal({ salon, onClose }) {
 }
 
 function Step1SelectEmployee({ employees, value, onChange }) {
+  if (!employees.length) {
+    return <div className="text-sm text-gray-600">No team members listed for this salon yet.</div>;
+  }
   return (
     <div className="space-y-4">
       <div className="font-medium">Select Your Barber</div>
@@ -168,10 +193,16 @@ function Step1SelectEmployee({ employees, value, onChange }) {
               value?.id === e.id ? "ring-2 ring-violet-600 border-violet-600" : ""
             }`}
           >
-            <img src={e.avatar} alt={e.name} className="h-14 w-14 rounded-full object-cover" />
+            <img
+              src={e.avatar || "https://placehold.co/80x80?text=Barber"}
+              alt={e.name}
+              className="h-14 w-14 rounded-full object-cover"
+            />
             <div>
               <div className="font-medium">{e.name}</div>
-              <div className="text-sm text-gray-500">{e.title}</div>
+              <div className="text-sm text-gray-500">
+                {(e.specialties || []).slice(0, 2).join(", ") || "Stylist"}
+              </div>
             </div>
           </button>
         ))}
@@ -181,6 +212,9 @@ function Step1SelectEmployee({ employees, value, onChange }) {
 }
 
 function Step2SelectService({ services, value, onChange }) {
+  if (!services.length) {
+    return <div className="text-sm text-gray-600">No services have been added yet.</div>;
+  }
   return (
     <div className="space-y-4">
       <div className="font-medium">Choose a Service</div>
@@ -195,9 +229,13 @@ function Step2SelectService({ services, value, onChange }) {
           >
             <div className="flex flex-col items-start">
               <div className="font-medium">{s.name}</div>
-              <div className="text-sm text-gray-500 leading-tight">{s.durationMin} min</div>
+              <div className="text-sm text-gray-500 leading-tight">
+                {s.duration_minutes ? `${s.duration_minutes} min` : "Duration varies"}
+              </div>
             </div>
-            <div className="font-semibold text-right">${s.price}</div>
+            <div className="font-semibold text-right">
+              {s.price != null ? `$${Number(s.price).toFixed(2)}` : "See salon"}
+            </div>
           </button>
         ))}
       </div>
@@ -205,7 +243,7 @@ function Step2SelectService({ services, value, onChange }) {
   );
 }
 
-function Step3DateTime({ dateISO, onDateISO, slots, time, onTime }) {
+function Step3DateTime({ dateISO, onDateISO, slots, slot, onSelect, error }) {
   return (
     <div className="space-y-6">
       <div className="font-medium">Pick Date &amp; Time</div>
@@ -215,27 +253,24 @@ function Step3DateTime({ dateISO, onDateISO, slots, time, onTime }) {
         </div>
         <div className="flex-1">
           <div className="text-sm text-gray-600 mb-2">Available Time Slots</div>
+          {error && <div className="text-sm text-rose-600 mb-2">{error}</div>}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {slots.map((s) => (
               <button
-                key={s.time}
-                onClick={() => s.status === "free" && onTime(s.time)}
-                disabled={s.status !== "free"}
-                className={`rounded-xl border px-4 py-2 text-sm ${
-                  s.status === "free"
-                    ? "hover:bg-gray-50"
-                    : s.status === "booked"
-                    ? "bg-gray-100 text-gray-400"
-                    : "bg-gray-200 text-gray-400"
-                } ${time === s.time ? "ring-2 ring-violet-600 border-violet-600" : ""}`}
-                title={s.status === "blocked" ? "Blocked" : s.status === "booked" ? "Booked" : "Available"}
+                key={s.start_at}
+                onClick={() => onSelect(s)}
+                className={`rounded-xl border px-4 py-2 text-sm hover:bg-gray-50 ${
+                  slot?.start_at === s.start_at ? "ring-2 ring-violet-600 border-violet-600" : ""
+                }`}
               >
-                {toFriendlyTime(s.time)}
+                {s.label || toFriendlyTime(new Date(s.start_at).toISOString().slice(11, 16))}
               </button>
             ))}
-          </div>
-          <div className="mt-2 text-xs text-gray-500">
-            Gray slots are already booked. Blocked slots are unavailable.
+            {slots.length === 0 && (
+              <div className="col-span-full text-sm text-gray-500">
+                No open slots for this day. Try another date.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -243,166 +278,53 @@ function Step3DateTime({ dateISO, onDateISO, slots, time, onTime }) {
   );
 }
 
-function Step4Details({ note, onNote, employee, service, dateISO, time }) {
+function Step4Review({ employee, service, slot, note, onNote, error, saving, onConfirm }) {
   return (
     <div className="space-y-4">
-      <div className="font-medium">Add Special Requests (Optional)</div>
+      <div className="font-medium">Review &amp; Confirm</div>
+      <div className="rounded-xl border p-4 text-sm text-gray-700 space-y-1">
+        <div>• Barber: {employee?.name}</div>
+        <div>• Service: {service?.name}</div>
+        <div>• Date: {slot ? toReadable(slot.start_at) : "--"}</div>
+        <div>• Time: {slot ? new Date(slot.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--"}</div>
+      </div>
       <textarea
         value={note}
         onChange={(e) => onNote(e.target.value)}
-        placeholder="Any special requests or notes for your barber…"
-        rows={5}
+        placeholder="Add any special requests or context for your stylist…"
+        rows={4}
         className="w-full rounded-xl border px-3 py-2 bg-gray-50"
       />
-      <div className="rounded-xl border p-4">
-        <div className="font-medium mb-2">Your appointment details:</div>
-        <ul className="text-sm text-gray-700 space-y-1">
-          <li>• Barber: {employee?.name}</li>
-          <li>• Service: {service?.name}</li>
-          <li>• Date: {toReadable(dateISO)}</li>
-          <li>• Time: {toFriendlyTime(time)}</li>
-        </ul>
-      </div>
+      {error && <div className="text-sm text-rose-600">{error}</div>}
+      <button
+        onClick={onConfirm}
+        disabled={saving}
+        className="w-full rounded-xl bg-gray-900 text-white py-3 font-medium disabled:opacity-40"
+      >
+        {saving ? "Booking…" : "Confirm Appointment"}
+      </button>
     </div>
   );
 }
 
-function Step5Payment({ total, payMethod, setPayMethod, card, setCard, payStatus, onConfirmPay }) {
+function ConfirmationSummary({ appointment, onClose }) {
   return (
-    <div className="space-y-5">
-      <div className="font-medium">Payment</div>
-
-        <div className="space-y-3">
-            {[
-                { key: "card", label: "Credit Card", icon: "💳" },
-                { key: "debit", label: "Debit Card", icon: "🏦" },
-                {
-                key: "paypal",
-                label: "PayPal",
-                icon: (
-                    <img
-                    src="https://www.svgrepo.com/show/475665/paypal-color.svg"
-                    alt="PayPal"
-                    className="h-4 inline-block mr-2"
-                    />
-                ),
-                },
-            ].map((m) => (
-                <button
-                key={m.key}
-                onClick={() => setPayMethod(m.key)}
-                className={`w-full flex items-center gap-2 rounded-2xl border px-4 py-3 text-left hover:shadow-sm ${
-                    payMethod === m.key ? "ring-2 ring-violet-600 border-violet-600" : ""
-                }`}
-                >
-                <span>{m.icon}</span>
-                <span>{m.label}</span>
-                </button>
-            ))}
-        </div>
-
-      {(payMethod === "card" || payMethod === "debit") && (
-        <div className="rounded-xl border p-4 bg-gray-50 space-y-2">
-          <div className="text-sm text-gray-700">Use these test cards:</div>
-          <div className="text-sm">
-            <span className="inline-flex items-center gap-2 rounded-md bg-green-50 text-green-700 px-2 py-1 mr-2">
-              ✓ Success: <code>4242 4242 4242 4242</code>
-            </span>
-            <span className="inline-flex items-center gap-2 rounded-md bg-red-50 text-red-700 px-2 py-1">
-              ✗ Declined: <code>4000 0000 0000 0002</code>
-            </span>
-          </div>
-          <div className="text-xs text-gray-500">Any future expiry and any 3-digit CVV will work.</div>
-        </div>
-      )}
-
-      {(payMethod === "card" || payMethod === "debit") && (
-        <div className="space-y-3">
-          <LabeledInput label="Card Number *" placeholder="1234 5678 9012 3456"
-            value={card.number} onChange={(v)=>setCard({ ...card, number:v })}
-          />
-          <LabeledInput label="Cardholder Name *" placeholder="John Doe"
-            value={card.name} onChange={(v)=>setCard({ ...card, name:v })}
-          />
-          <div className="grid grid-cols-3 gap-3">
-            <LabeledInput label="Expiry Date *" placeholder="MM/YY"
-              value={card.exp} onChange={(v)=>setCard({ ...card, exp:v })}
-            />
-            <LabeledInput label="CVV *" placeholder="123"
-              value={card.cvv} onChange={(v)=>setCard({ ...card, cvv:v })}
-            />
-            <div className="flex items-end">
-              <button
-                onClick={onConfirmPay}
-                className="w-full rounded-xl bg-gray-900 text-white px-4 py-2 disabled:opacity-40"
-                disabled={payStatus === "proc"}
-              >
-                {payStatus === "proc" ? "Processing…" : `Confirm & Pay $${total}`}
-              </button>
-            </div>
-          </div>
-          {payStatus === "fail" && (
-            <div className="text-sm text-red-600">Payment failed. Try the success test card or PayPal.</div>
-          )}
-        </div>
-      )}
-
-      {payMethod === "paypal" && (
-        <button
-          onClick={onConfirmPay}
-          className="w-full rounded-xl bg-blue-600 text-white px-4 py-2"
-          disabled={payStatus === "proc"}
-        >
-          {payStatus === "proc" ? "Processing…" : "Pay with PayPal (mock)"}
-        </button>
-      )}
-
-      <div className="rounded-xl border px-4 py-3 text-sm text-gray-600 flex items-center gap-2">
-        <span>🔒</span>
-        <span>Your payment information is encrypted and secure. Total: ${total}</span>
+    <div className="space-y-4 text-center">
+      <div className="mx-auto size-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl">
+        ✓
       </div>
+      <h2 className="text-xl font-semibold text-gray-900">Appointment Confirmed</h2>
+      <p className="text-sm text-gray-600">
+        We’ve scheduled your service for {toReadable(appointment.start_at)} at{" "}
+        {new Date(appointment.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.
+      </p>
+      <button
+        onClick={onClose}
+        className="w-full rounded-xl bg-gray-900 text-white py-3 font-medium hover:opacity-90"
+      >
+        Close
+      </button>
     </div>
-  );
-}
-
-function ConfirmationSummary({ salon, employee, service, dateISO, time, note, total, bookingRef, onClose }) {
-  return (
-    <div className="space-y-5">
-      <div className="text-lg font-semibold">Booking Confirmed</div>
-      <div className="rounded-xl border p-4 bg-green-50 text-green-800">✓ Payment successful</div>
-
-      <div className="rounded-xl border p-4 space-y-2">
-        <div className="font-medium">{salon.name}</div>
-        <div className="text-sm text-gray-700">Ref: <span className="font-mono">{bookingRef}</span></div>
-        <ul className="text-sm text-gray-700 space-y-1">
-          <li>• Barber: {employee?.name}</li>
-          <li>• Service: {service?.name}</li>
-          <li>• Date: {toReadable(dateISO)}</li>
-          <li>• Time: {toFriendlyTime(time)}</li>
-          {note && <li>• Notes: {note}</li>}
-          <li>• Total Paid: ${total}</li>
-        </ul>
-      </div>
-
-      <div className="flex gap-3">
-        <button onClick={onClose} className="rounded-xl border px-4 py-2">Close</button>
-        <button className="rounded-xl bg-gray-900 text-white px-4 py-2">View My Appointments</button>
-      </div>
-    </div>
-  );
-}
-
-function LabeledInput({ label, value, onChange, placeholder="" }) {
-  return (
-    <label className="text-sm w-full">
-      <div className="mb-1 text-gray-700">{label}</div>
-      <input
-        value={value}
-        onChange={(e)=>onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-xl border px-3 py-2 bg-gray-50"
-      />
-    </label>
   );
 }
 
@@ -460,8 +382,24 @@ function buildCalendarDays(dateISO) {
   return cells;
 }
 
-function toISO(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0,10); }
-function stripTime(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-function toFriendlyTime(hhmm){ if(!hhmm) return ""; const [h,m]=hhmm.split(":").map(Number); const ampm=h>=12?"PM":"AM"; const hh=((h+11)%12)+1; return `${hh}:${m.toString().padStart(2,"0")} ${ampm}`; }
-function toReadable(iso){ const d=new Date(iso); return d.toLocaleDateString(undefined,{year:"numeric",month:"2-digit",day:"2-digit"}); }
-function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function toISO(d) {
+  const copy = new Date(d);
+  return new Date(copy.getFullYear(), copy.getMonth(), copy.getDate()).toISOString().slice(0, 10);
+}
+
+function stripTime(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function toFriendlyTime(hhmm) {
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hh = ((h + 11) % 12) + 1;
+  return `${hh}:${m.toString().padStart(2, "0")} ${ampm}`;
+}
+
+function toReadable(iso) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+}

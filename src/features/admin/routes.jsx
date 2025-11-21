@@ -1,14 +1,12 @@
 import { lazy } from "react";
-import { RoleGate } from "../../shared/routing/Protected.jsx";
+import { RoleGate } from "../../shared/routing/RoleGate.jsx";
 
-const AdminDashboard = lazy(() => import("../../pages/admin/AdminDashboard.jsx"));
-const PlatformHealth = lazy(() => import("../../pages/admin/PlatformHealth.jsx"));
-
-// Import existing admin pages
-const AdminVerify = lazy(() => import("../salon-reg/pages/AdminVerify.jsx"));
-const AdminAnalytics = lazy(() => import("../salon-reg/pages/AdminAnalytics.jsx"));
-const CustomerInsights = lazy(() => import("../salon-reg/pages/CustomerInsights.jsx"));
-const PlatformMonitoring = lazy(() => import("../salon-reg/pages/PlatformMonitoring.jsx"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard.jsx"));
+const PlatformHealth = lazy(() => import("./pages/PlatformHealth.jsx"));
+const AdminVerify = lazy(() => import("./pages/AdminVerify.jsx"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics.jsx"));
+const CustomerInsights = lazy(() => import("./pages/CustomerInsights.jsx"));
+const PlatformMonitoring = lazy(() => import("./pages/PlatformMonitoring.jsx"));
 
 export default [
   { 
@@ -36,4 +34,3 @@ export default [
     element: <RoleGate allow={["admin"]}><PlatformMonitoring /></RoleGate> 
   },
 ];
-

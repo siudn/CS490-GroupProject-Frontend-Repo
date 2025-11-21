@@ -11,12 +11,10 @@ export default function VendorDenyModal({ item, onClose, onSuccess }) {
   async function confirm() {
     const msg = reason === "Other" ? (custom || "Other") : reason;
     setSaving(true);
-    const res = await vendorDeny(item.id, msg);
+    await vendorDeny(item.id, msg);
     setSaving(false);
-    if (res?.ok) {
-      onSuccess({ ...item, status: "denied", reason: msg });
-      onClose();
-    }
+    onSuccess();
+    onClose();
   }
 
   return (
