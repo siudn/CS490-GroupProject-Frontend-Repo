@@ -28,28 +28,28 @@ export default function Header() {
       case "customer":
         return (
           <>
-            <NavLink to="/customer/browse" className={linkClass}>Browse Salons</NavLink>
-            <NavLink to="/customer/appointments" className={linkClass}>My Appointments</NavLink>
-            <NavLink to="/customer/loyalty" className={linkClass}>Loyalty</NavLink>
-            <NavLink to="/customer/profile" className={linkClass}>Profile</NavLink>
+            <NavLink to="/browse" className={linkClass}>Browse Salons</NavLink>
+            <NavLink to="/appointments" className={linkClass}>My Appointments</NavLink>
+            <NavLink to="/rewards" className={linkClass}>Loyalty</NavLink>
+            <NavLink to="/profile" className={linkClass}>Profile</NavLink>
           </>
         );
       case "owner":
       case "salon_owner":
         return (
           <>
-            <NavLink to="/owner/dashboard" className={linkClass}>Dashboard</NavLink>
-            <NavLink to="/owner/register" className={linkClass}>Registration</NavLink>
-            <NavLink to="/owner/customers" className={linkClass}>Customers</NavLink>
-            <NavLink to="/owner/loyalty" className={linkClass}>Loyalty Program</NavLink>
-            <NavLink to="/owner/shop" className={linkClass}>My Shop</NavLink>
-            <NavLink to="/owner/payments" className={linkClass}>Payments</NavLink>
+            <NavLink to="/salon-dashboard" className={linkClass}>Dashboard</NavLink>
+            <NavLink to="/salon-registration" className={linkClass}>Registration</NavLink>
+            <NavLink to="/clients" className={linkClass}>Customers</NavLink>
+            <NavLink to="/loyalty-program" className={linkClass}>Loyalty Program</NavLink>
+            <NavLink to="/retail" className={linkClass}>My Shop</NavLink>
+            <NavLink to="/payments" className={linkClass}>Payments</NavLink>
           </>
         );
       case "barber":
         return (
           <>
-            <NavLink to="/barber/schedule" className={linkClass}>My Schedule</NavLink>
+            <NavLink to="/schedule" className={linkClass}>My Schedule</NavLink>
           </>
         );
       case "admin":

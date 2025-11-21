@@ -1,19 +1,29 @@
-import { Navigate } from "react-router-dom";
 import authRoutes from "../features/auth/routes.jsx";
-import customerRoutes from "../features/customer/routes.jsx";
-import ownerRoutes from "../features/owner/routes.jsx";
-import barberRoutes from "../features/barber/routes.jsx";
+import bookingRoutes from "../features/booking/routes.jsx";
+import loyaltyRoutes from "../features/loyalty/routes.jsx";
+import profileRoutes from "../features/profile/routes.jsx";
+import dashboardRoutes from "../features/dashboard/routes.jsx";
+import customerManagementRoutes from "../features/customer-management/routes.jsx";
+import shopRoutes from "../features/shop/routes.jsx";
+import paymentsRoutes from "../features/payments/routes.jsx";
+import salonRegRoutes from "../features/salon-reg/routes.jsx";
+import scheduleRoutes from "../features/schedule/routes.jsx";
 import adminRoutes from "../features/admin/routes.jsx";
+import homeRoutes from "../features/home/routes.jsx";
 import NotFound from "./NotFound.jsx";
-import { RoleBasedRedirect } from "../shared/routing/RoleBasedRedirect.jsx";
-import Home from "../pages/Home.jsx";
 
 export default [
-    { index: true, element: <Home /> },
+    ...homeRoutes,
     ...authRoutes,
-    ...customerRoutes,
-    ...ownerRoutes,
-    ...barberRoutes,
+    ...bookingRoutes,
+    ...loyaltyRoutes,
+    ...profileRoutes,
+    ...dashboardRoutes,
+    ...customerManagementRoutes,
+    ...shopRoutes,
+    ...paymentsRoutes,
+    ...salonRegRoutes,
+    ...scheduleRoutes,
     ...adminRoutes,
     { path: "*", element: <NotFound /> },
 ];
