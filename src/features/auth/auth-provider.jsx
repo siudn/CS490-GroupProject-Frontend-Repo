@@ -68,7 +68,7 @@ function RealAuthProvider({ children }) {
         });
         if (r.ok) {
           const userData = await r.json();
-          setUser(userData);
+          setUser(userData.user || userData);
         } else {
           // Token invalid, clear it
           clearTokens();
