@@ -19,7 +19,9 @@ export default function RescheduleModal({ appt, onClose, onSuccess }) {
         dateISO,
       });
       if (!alive) return;
-      setSlots(s);
+      const tz = appt.salon?.timezone || "America/New_York";
+      const enriched = (s || []).map((row) => ({ ...row, timezone: row.timezone || tz }));
+      setSlots(enriched);
       setSlot(null);
     })();
     return () => { alive = false; };
@@ -67,7 +69,7 @@ export default function RescheduleModal({ appt, onClose, onSuccess }) {
                       slot?.start_at === s.start_at ? "ring-2 ring-violet-600 border-violet-600" : "hover:bg-gray-50"
                     }`}
                   >
-                    {s.label || new Date(s.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                    {s.label || formatTimeInTz(s.start_at, s.timezone || appt.salon?.timezone || "America/New_York")}
                   </button>
                 ))}
                 {slots.length === 0 && (
@@ -94,7 +96,7 @@ export default function RescheduleModal({ appt, onClose, onSuccess }) {
 }
 
 function Calendar({ dateISO, onDateISO }) {
-  const d = new Date(dateISO);
+  const d = parseISODate(dateISO);
   const ym = new Date(d.getFullYear(), d.getMonth(), 1);
   const days = buildCalendarDays(dateISO);
   const prev = () => onDateISO(toISO(new Date(d.getFullYear(), d.getMonth() - 1, d.getDate())));
@@ -128,7 +130,7 @@ function Calendar({ dateISO, onDateISO }) {
 }
 
 function buildCalendarDays(dateISO) {
-  const d = new Date(dateISO);
+  const d = parseISODate(dateISO);
   const y = d.getFullYear(), m = d.getMonth();
   const first = new Date(y, m, 1);
   const start = new Date(y, m, 1 - first.getDay());
@@ -146,6 +148,23 @@ function buildCalendarDays(dateISO) {
   }
   return cells;
 }
-function toISO(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0,10); }
+function toISO(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 function stripTime(d){ return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
-function toFriendlyTime(hhmm){ if(!hhmm) return ""; const [h,m]=hhmm.split(":").map(Number); const ampm=h>=12?"PM":"AM"; const hh=((h+11)%12)+1; return `${hh}:${m.toString().padStart(2,"0")} ${ampm}`; }
+function parseISODate(dateISO){ const [y,m,d]=dateISO.split("-").map(Number); return new Date(y||0,(m||1)-1,d||1); }
+function formatTimeInTz(iso, tz = "America/New_York") {
+  if (!iso) return "";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  } catch (e) {
+    return "";
+  }
+}

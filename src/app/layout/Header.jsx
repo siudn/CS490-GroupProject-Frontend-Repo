@@ -20,6 +20,14 @@ export default function Header() {
     }
   };
 
+  const displayName = (() => {
+    if (!user) return "";
+    const first = user.first_name || user.firstName || "";
+    const last = user.last_name || user.lastName || "";
+    const name = `${first} ${last}`.trim();
+    return name || user.name || user.email || "User";
+  })();
+
   // Role-based navigation links
   const getNavLinks = () => {
     if (!user) return null;
@@ -83,7 +91,7 @@ export default function Header() {
             <>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">
-                  Welcome, {user.email}
+                  Welcome, {displayName}
                 </span>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                   {user.role}
