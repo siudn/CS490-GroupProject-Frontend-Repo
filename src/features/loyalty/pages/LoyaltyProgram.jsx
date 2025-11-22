@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Button } from "../../shared/ui/button";
-import { Input } from "../../shared/ui/input";
-import { getLoyaltyConfig, updateLoyaltyConfig } from "../../features/loyalty/api.js";
+import { Button } from "../../../shared/ui/button";
+import { Input } from "../../../shared/ui/input";
+import { getLoyaltyConfig, updateLoyaltyConfig } from "../api.js";
 
 export default function LoyaltyProgram() {
   const [pointsPerDollar, setPointsPerDollar] = useState(1);
