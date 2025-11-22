@@ -1,5 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../features/auth/auth-provider.jsx";
+import { api } from "../../shared/api/client.js";
 import salonicaLogo from "../../assets/salonica.png";
 
 const linkClass = ({ isActive }) =>
@@ -10,6 +12,7 @@ const linkClass = ({ isActive }) =>
 export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [ownerHasVerifiedSalon, setOwnerHasVerifiedSalon] = useState(null);
 
   const handleLogout = async () => {
     try {
@@ -28,6 +31,28 @@ export default function Header() {
     return name || user.name || user.email || "User";
   })();
 
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchOwnerSalon() {
+      if (!user || (user.role !== "owner" && user.role !== "salon_owner")) {
+        setOwnerHasVerifiedSalon(null);
+        return;
+      }
+      try {
+        const res = await api("/salons/mine");
+        if (cancelled) return;
+        const salon = res.salon || null;
+        setOwnerHasVerifiedSalon(salon?.status === "verified");
+      } catch (err) {
+        if (!cancelled) setOwnerHasVerifiedSalon(false);
+      }
+    }
+    fetchOwnerSalon();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.role]);
+
   // Role-based navigation links
   const getNavLinks = () => {
     if (!user) return null;
@@ -44,6 +69,11 @@ export default function Header() {
         );
       case "owner":
       case "salon_owner":
+        if (ownerHasVerifiedSalon === false || ownerHasVerifiedSalon === null) {
+          return (
+            <NavLink to="/salon-registration" className={linkClass}>Registration</NavLink>
+          );
+        }
         return (
           <>
             <NavLink to="/salon-dashboard" className={linkClass}>Dashboard</NavLink>
