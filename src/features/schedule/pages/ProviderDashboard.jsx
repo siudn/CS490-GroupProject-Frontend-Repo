@@ -773,7 +773,13 @@ export default function ProviderDashboard() {
                   </p>
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {todayAppointments.length}
+                  {
+                    todayAppointments.filter((a) =>
+                      ["scheduled", "confirmed", "completed", "no_show"].includes(
+                        (a.status || "").toLowerCase()
+                      )
+                    ).length
+                  }
                 </p>
               </div>
             </div>
@@ -791,7 +797,29 @@ export default function ProviderDashboard() {
                   </p>
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
-                  {(todayAppointments.length * 0.75).toFixed(1)}h
+                  {(() => {
+                    const totalMinutes = todayAppointments
+                      .filter((a) =>
+                        ["scheduled", "confirmed", "completed", "no_show"].includes(
+                          (a.status || "").toLowerCase()
+                        )
+                      )
+                      .reduce((sum, a) => {
+                        if (a.duration_minutes) return sum + Number(a.duration_minutes) || 0;
+                        if (a.start_at && a.end_at) {
+                          return (
+                            sum +
+                            Math.max(
+                              0,
+                              (new Date(a.end_at).getTime() - new Date(a.start_at).getTime()) /
+                                (60 * 1000)
+                            )
+                          );
+                        }
+                        return sum;
+                      }, 0);
+                    return `${(totalMinutes / 60).toFixed(1)}h`;
+                  })()}
                 </p>
               </div>
             </div>
