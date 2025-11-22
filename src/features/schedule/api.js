@@ -1,7 +1,8 @@
 import { api } from "../../shared/api/client.js";
 
 const AVAILABILITY_BASE = "/schedule/availability";
-const APPOINTMENTS_BASE = "/appointments/";
+const APPOINTMENTS_BASE = "/appointments";
+const UNAVAILABILITY_BASE = "/schedule/unavailability";
 
 export async function fetchAvailability() {
   return api(AVAILABILITY_BASE);
@@ -44,3 +45,48 @@ export async function patchAppointment(payload) {
   });
 }
 
+// ---- Unavailability / blocking ----
+export async function fetchUnavailability(params = {}) {
+  const query = new URLSearchParams();
+  if (params.start_from) query.append("start_from", params.start_from);
+  if (params.end_before) query.append("end_before", params.end_before);
+  const qs = query.toString();
+  return api(`${UNAVAILABILITY_BASE}${qs ? `?${qs}` : ""}`);
+}
+
+export async function createUnavailability(payload) {
+  if (!payload?.start_datetime || !payload?.end_datetime) {
+    throw new Error("start_datetime and end_datetime are required.");
+  }
+
+  return api(UNAVAILABILITY_BASE, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateUnavailability(blockId, updates) {
+  if (!blockId) {
+    throw new Error("blockId is required to update unavailability.");
+  }
+  if (!updates || Object.keys(updates).length === 0) {
+    throw new Error("No updates provided for unavailability.");
+  }
+
+  return api(`${UNAVAILABILITY_BASE}/${blockId}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteUnavailability(blockId, params = {}) {
+  if (!blockId) {
+    throw new Error("blockId is required to delete unavailability.");
+  }
+  const query = new URLSearchParams();
+  if (params.barber_id) query.append("barber_id", params.barber_id);
+  const qs = query.toString();
+  return api(`${UNAVAILABILITY_BASE}/${blockId}${qs ? `?${qs}` : ""}`, {
+    method: "DELETE",
+  });
+}
