@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../features/auth/auth-provider.jsx";
 import { api } from "../../shared/api/client.js";
+import { checkSetupStatus } from "../../features/salon-reg/api.js";
 import salonicaLogo from "../../assets/salonica.png";
 
 const linkClass = ({ isActive }) =>
@@ -13,6 +14,7 @@ export default function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [ownerHasVerifiedSalon, setOwnerHasVerifiedSalon] = useState(null);
+  const [ownerSetupComplete, setOwnerSetupComplete] = useState(null);
 
   const handleLogout = async () => {
     try {
@@ -36,20 +38,49 @@ export default function Header() {
     async function fetchOwnerSalon() {
       if (!user || (user.role !== "owner" && user.role !== "salon_owner")) {
         setOwnerHasVerifiedSalon(null);
+        setOwnerSetupComplete(null);
         return;
       }
       try {
         const res = await api("/salons/mine");
         if (cancelled) return;
         const salon = res.salon || null;
-        setOwnerHasVerifiedSalon(salon?.status === "verified");
+        const isVerified = salon?.status === "verified";
+        setOwnerHasVerifiedSalon(isVerified);
+        
+        // If verified, check setup completion
+        if (isVerified && salon?.id) {
+          try {
+            const setupStatus = await checkSetupStatus(salon.id);
+            if (!cancelled) {
+              setOwnerSetupComplete(setupStatus.isComplete);
+            }
+          } catch (err) {
+            if (!cancelled) setOwnerSetupComplete(false);
+          }
+        } else {
+          setOwnerSetupComplete(null);
+        }
       } catch (err) {
-        if (!cancelled) setOwnerHasVerifiedSalon(false);
+        if (!cancelled) {
+          setOwnerHasVerifiedSalon(false);
+          setOwnerSetupComplete(false);
+        }
       }
     }
     fetchOwnerSalon();
+    
+    // Listen for setup completion events
+    const handleSetupComplete = () => {
+      if (!cancelled) {
+        fetchOwnerSalon();
+      }
+    };
+    window.addEventListener('setupStatusChanged', handleSetupComplete);
+    
     return () => {
       cancelled = true;
+      window.removeEventListener('setupStatusChanged', handleSetupComplete);
     };
   }, [user?.role]);
 
@@ -69,20 +100,28 @@ export default function Header() {
         );
       case "owner":
       case "salon_owner":
-        if (ownerHasVerifiedSalon === false || ownerHasVerifiedSalon === null) {
+        // If verified and setup complete, show full navigation
+        if (ownerHasVerifiedSalon === true && ownerSetupComplete === true) {
           return (
-            <NavLink to="/salon-registration" className={linkClass}>Registration</NavLink>
+            <>
+              <NavLink to="/salon-dashboard" className={linkClass}>Dashboard</NavLink>
+              <NavLink to="/salon-registration" className={linkClass}>Registration</NavLink>
+              <NavLink to="/clients" className={linkClass}>Customers</NavLink>
+              <NavLink to="/loyalty-program" className={linkClass}>Loyalty Program</NavLink>
+              <NavLink to="/retail" className={linkClass}>My Shop</NavLink>
+              <NavLink to="/payments" className={linkClass}>Payments</NavLink>
+            </>
           );
         }
+        // If verified but setup not complete, only show Setup link
+        if (ownerHasVerifiedSalon === true && ownerSetupComplete === false) {
+          return (
+            <NavLink to="/salon-setup" className={linkClass}>Complete Setup</NavLink>
+          );
+        }
+        // If not verified or loading, show registration link
         return (
-          <>
-            <NavLink to="/salon-dashboard" className={linkClass}>Dashboard</NavLink>
-            <NavLink to="/salon-registration" className={linkClass}>Registration</NavLink>
-            <NavLink to="/clients" className={linkClass}>Customers</NavLink>
-            <NavLink to="/loyalty-program" className={linkClass}>Loyalty Program</NavLink>
-            <NavLink to="/retail" className={linkClass}>My Shop</NavLink>
-            <NavLink to="/payments" className={linkClass}>Payments</NavLink>
-          </>
+          <NavLink to="/salon-registration" className={linkClass}>Registration</NavLink>
         );
       case "barber":
         return (

@@ -7,9 +7,11 @@ import { Textarea } from "../../../shared/ui/textarea";
 import { Alert, AlertDescription } from "../../../shared/ui/alert";
 import { Badge } from "../../../shared/ui/badge";
 import { CheckCircle2, Clock, Upload, AlertCircle, Info } from "lucide-react";
-import { submitSalonRegistration, getOwnedSalon, getSalonDetail, updatePendingApplication } from "../api.js";
+import { useNavigate } from "react-router-dom";
+import { submitSalonRegistration, getOwnedSalon, getSalonDetail, updatePendingApplication, checkSetupStatus } from "../api.js";
 
 export default function SalonRegister() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState("loading");
   const [statusMessage, setStatusMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,6 +54,13 @@ export default function SalonRegister() {
       }
 
       if (salon.status === "verified") {
+        // Check if setup is complete
+        const setupStatus = await checkSetupStatus(salon.id);
+        if (!setupStatus.isComplete) {
+          // Redirect to setup page if not complete
+          navigate("/salon-setup");
+          return;
+        }
         setStatus("approved");
         setShowForm(false);
         setIsEditing(false);
@@ -221,6 +230,13 @@ export default function SalonRegister() {
           setShowForm(true);
           setIsEditing(true);
         } else if (salon.status === "verified") {
+          // Check if setup is complete
+          const setupStatus = await checkSetupStatus(salon.id);
+          if (!setupStatus.isComplete) {
+            // Redirect to setup page if not complete
+            navigate("/salon-setup");
+            return;
+          }
           setStatus("approved");
           setShowForm(false);
           setIsEditing(false);
