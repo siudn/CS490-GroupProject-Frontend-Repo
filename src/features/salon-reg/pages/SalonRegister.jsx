@@ -1,338 +1,738 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../shared/ui/card';
-import { Button } from '../../../shared/ui/button';
-import { Input } from '../../../shared/ui/input';
-import { Label } from '../../../shared/ui/label';
-import { Textarea } from '../../../shared/ui/textarea';
-import { Alert, AlertDescription } from '../../../shared/ui/alert';
-import { Badge } from '../../../shared/ui/badge';
-import { CheckCircle2, XCircle, Clock, Upload, AlertCircle } from 'lucide-react';
-import { useAuth } from '../../auth/auth-provider.jsx';
-import { 
-  submitSalonRegistration, 
-  getSalonRegistrationStatus, 
-  updateSalonRegistration 
-} from '../api.js';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../shared/ui/card";
+import { Button } from "../../../shared/ui/button";
+import { Input } from "../../../shared/ui/input";
+import { Label } from "../../../shared/ui/label";
+import { Textarea } from "../../../shared/ui/textarea";
+import { Alert, AlertDescription } from "../../../shared/ui/alert";
+import { Badge } from "../../../shared/ui/badge";
+import { CheckCircle2, Clock, Upload, AlertCircle, Info } from "lucide-react";
+import { submitSalonRegistration, getOwnedSalon, getSalonDetail, updatePendingApplication } from "../api.js";
 
 export default function SalonRegister() {
-  const { user } = useAuth();
-  const [status, setStatus] = useState('not_submitted');
+  const [status, setStatus] = useState("loading");
+  const [statusMessage, setStatusMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [salonName, setSalonName] = useState('');
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
-  const [description, setDescription] = useState('');
-  const [businessLicense, setBusinessLicense] = useState(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [applicationId, setApplicationId] = useState(null);
+  const [ownedSalon, setOwnedSalon] = useState(null);
+  const [currentSalonId, setCurrentSalonId] = useState(null);
+  const [showForm, setShowForm] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [existingLogoUrl, setExistingLogoUrl] = useState("");
+  const [existingLicenseUrl, setExistingLicenseUrl] = useState("");
+  const [originalValues, setOriginalValues] = useState({
+    name: "",
+    address: "",
+    city: "",
+    state: "",
+    zip: "",
+    phone: "",
+    email: "",
+    description: "",
+    timezone: "America/New_York",
+  });
+
+  const cacheBust = (url) => {
+    if (!url) return "";
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}v=${Date.now()}`;
+  };
+
+  const refreshSalonData = async () => {
+    try {
+      const res = await getOwnedSalon();
+      const salon = res.salon || null;
+      setOwnedSalon(salon);
+      setCurrentSalonId(salon?.id || null);
+
+      if (!salon) {
+        setStatus("not_submitted");
+        setShowForm(true);
+        setIsEditing(true);
+        return;
+      }
+
+      if (salon.status === "verified") {
+        setStatus("approved");
+        setShowForm(false);
+        setIsEditing(false);
+      } else if (salon.status === "pending") {
+        setStatus("pending");
+        setShowForm(false);
+        setIsEditing(false);
+      } else if (salon.status === "rejected") {
+        setStatus("rejected");
+        setShowForm(false);
+        setIsEditing(false);
+      } else {
+        setStatus("not_submitted");
+        setShowForm(true);
+        setIsEditing(true);
+      }
+
+      try {
+        const detail = await getSalonDetail(salon.id);
+        setName(detail.name || salon.name || "");
+        setAddress(detail.address || salon.address || "");
+        setCity(detail.city || "");
+        setState(detail.state || "");
+        setZip(detail.zip_code || "");
+        setPhone(detail.phone || "");
+        setEmail(detail.email || "");
+        setDescription(detail.description || "");
+        setTimezone(detail.timezone || "America/New_York");
+        setExistingLogoUrl(cacheBust(detail.logo_url || salon.logo_url || ""));
+        setExistingLicenseUrl(cacheBust(detail.license_url || salon.license_url || ""));
+        setOriginalValues({
+          name: detail.name || salon.name || "",
+          address: detail.address || salon.address || "",
+          city: detail.city || "",
+          state: detail.state || "",
+          zip: detail.zip_code || "",
+          phone: detail.phone || "",
+          email: detail.email || "",
+          description: detail.description || "",
+          timezone: detail.timezone || "America/New_York",
+        });
+      } catch (err) {
+        setName(salon?.name || "");
+        setAddress(salon?.address || "");
+        setCity(salon?.city || "");
+        setState(salon?.state || "");
+        setZip(salon?.zip_code || "");
+        setPhone(salon?.phone || "");
+        setEmail(salon?.email || "");
+        setDescription(salon?.description || "");
+        setExistingLogoUrl(cacheBust(salon?.logo_url || ""));
+        setExistingLicenseUrl(cacheBust(salon?.license_url || ""));
+        setOriginalValues({
+          name: salon?.name || "",
+          address: salon?.address || "",
+          city: salon?.city || "",
+          state: salon?.state || "",
+          zip: salon?.zip_code || "",
+          phone: salon?.phone || "",
+          email: salon?.email || "",
+          description: salon?.description || "",
+          timezone: salon?.timezone || "America/New_York",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load owned salons:", error);
+      setOwnedSalon(null);
+      setStatus("not_submitted");
+      setShowForm(true);
+      setIsEditing(true);
+    }
+  };
+
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [zip, setZip] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [description, setDescription] = useState("");
+  const [timezone, setTimezone] = useState("America/New_York");
+  const [logoFile, setLogoFile] = useState(null);
+  const [licenseFile, setLicenseFile] = useState(null);
+  const [formError, setFormError] = useState("");
+
+  const parseError = (err) => {
+    const fallback = "Application failed. Try again later.";
+    if (!err) return fallback;
+    const raw = err.message || err.toString();
+    const lowerRaw = raw.toLowerCase();
+    if (lowerRaw.includes("row-level security") || lowerRaw.includes("rls")) {
+      return "Try a different file.";
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === "string") return parsed;
+      if (parsed.error) return parsed.error;
+      if (Array.isArray(parsed.details) && parsed.details.length) {
+        const first = parsed.details[0];
+        if (first.msg) return first.msg;
+        if (first.message) return first.message;
+      }
+    } catch (_) {
+      // not JSON
+    }
+    if (raw && raw.includes("Validation failed")) return "Validation failed. Please check your entries.";
+    return raw || fallback;
+  };
+
+  const validateForm = () => {
+    const phoneDigits = phone ? phone.replace(/\D/g, "") : "";
+    const emailValid = email ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) : false;
+    if (!phone && !email) {
+      setFormError("Please provide at least one contact method (phone or email).");
+      return false;
+    }
+    if (phoneDigits && phoneDigits.length !== 10) {
+      setFormError("Phone must be exactly 10 digits.");
+      return false;
+    }
+    if (email && !emailValid) {
+      setFormError("Please enter a valid email address.");
+      return false;
+    }
+    if (!state || state.length !== 2) {
+      setFormError("State must be a 2-letter code.");
+      return false;
+    }
+    if (!zip || !/^\d{5}$/.test(zip)) {
+      setFormError("ZIP Code must be 5 digits.");
+      return false;
+    }
+    if (status === "not_submitted" && !licenseFile) {
+      setFormError("Business license is required.");
+      return false;
+    }
+    setFormError("");
+    return true;
+  };
+
+  const resetToOriginal = () => {
+    setName(originalValues.name || "");
+    setAddress(originalValues.address || "");
+    setCity(originalValues.city || "");
+    setState(originalValues.state || "");
+    setZip(originalValues.zip || "");
+    setPhone(originalValues.phone || "");
+    setEmail(originalValues.email || "");
+    setDescription(originalValues.description || "");
+    setTimezone(originalValues.timezone || "America/New_York");
+    setLogoFile(null);
+    setLicenseFile(null);
+    setFormError("");
+    setIsEditing(false);
+  };
 
   useEffect(() => {
-    if (user?.id) {
-      loadRegistrationStatus();
+    async function loadOwned() {
+      try {
+        const res = await getOwnedSalon();
+        const salon = res.salon || null;
+        setOwnedSalon(salon);
+        setCurrentSalonId(salon?.id || null);
+        if (!salon) {
+          setStatus("not_submitted");
+          setShowForm(true);
+          setIsEditing(true);
+        } else if (salon.status === "verified") {
+          setStatus("approved");
+          setShowForm(false);
+          setIsEditing(false);
+        } else if (salon.status === "pending") {
+          setStatus("pending");
+          setShowForm(false);
+          setIsEditing(false);
+        } else if (salon.status === "rejected") {
+          setStatus("rejected");
+          setShowForm(false);
+          setIsEditing(false);
+        } else {
+          setStatus("not_submitted");
+          setShowForm(true);
+          setIsEditing(true);
+        }
+        if (salon?.id) {
+          try {
+            const detail = await getSalonDetail(salon.id);
+            setName(detail.name || salon.name || "");
+            setAddress(detail.address || salon.address || "");
+            setCity(detail.city || "");
+            setState(detail.state || "");
+            setZip(detail.zip_code || "");
+            setPhone(detail.phone || "");
+            setEmail(detail.email || "");
+            setDescription(detail.description || "");
+            setTimezone(detail.timezone || "America/New_York");
+            setExistingLogoUrl(detail.logo_url || salon.logo_url || "");
+            setExistingLicenseUrl(detail.license_url || salon.license_url || "");
+            setOriginalValues({
+              name: detail.name || salon.name || "",
+              address: detail.address || salon.address || "",
+              city: detail.city || "",
+              state: detail.state || "",
+              zip: detail.zip_code || "",
+              phone: detail.phone || "",
+              email: detail.email || "",
+              description: detail.description || "",
+              timezone: detail.timezone || "America/New_York",
+            });
+          } catch (err) {
+            // ignore detail load failures
+            setName(salon?.name || "");
+            setAddress(salon?.address || "");
+            setCity(salon?.city || "");
+            setState(salon?.state || "");
+            setZip(salon?.zip_code || "");
+            setPhone(salon?.phone || "");
+            setEmail(salon?.email || "");
+            setDescription(salon?.description || "");
+            setExistingLogoUrl(salon?.logo_url || "");
+            setExistingLicenseUrl(salon?.license_url || "");
+            setOriginalValues({
+              name: salon?.name || "",
+              address: salon?.address || "",
+              city: salon?.city || "",
+              state: salon?.state || "",
+              zip: salon?.zip_code || "",
+              phone: salon?.phone || "",
+              email: salon?.email || "",
+              description: salon?.description || "",
+              timezone: salon?.timezone || "America/New_York",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load owned salons:", error);
+        setOwnedSalon(null);
+        setStatus("not_submitted");
+      }
     }
-  }, [user?.id]);
+    loadOwned();
+  }, []);
 
-  const loadRegistrationStatus = async () => {
-    try {
-      const statusData = await getSalonRegistrationStatus(user.id);
-      setStatus(statusData.status);
-      setApplicationId(statusData.applicationId);
-      setRejectionReason(statusData.rejectionReason || '');
-    } catch (error) {
-      console.error('Failed to load registration status:', error);
-    }
+  const updateDay = (dayIndex, updates) => {
+    setHours((prev) =>
+      prev.map((h) => (h.day_of_week === dayIndex ? { ...h, ...updates } : h))
+    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
     setLoading(true);
-
     try {
-      const formData = {
-        salonName,
-        address,
-        phone,
-        description,
-        businessLicense: businessLicense?.name || '',
-        ownerId: user.id,
-        ownerName: user.name,
-        ownerEmail: user.email
-      };
+      const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
 
-      const result = await submitSalonRegistration(formData);
-      
-      if (result.success) {
-        setStatus('pending');
-        setApplicationId(result.applicationId);
+      const result = await submitSalonRegistration({
+        name,
+        address,
+        city,
+        state,
+        zip_code: zip,
+        phone: cleanPhone || undefined,
+        email: email || undefined,
+        description,
+        timezone,
+        logoFile,
+        licenseFile,
+      });
+
+      setStatus("pending");
+      setStatusMessage(result.message || "Application submitted. Awaiting admin review.");
+      const refreshed = await getOwnedSalon();
+      setOwnedSalon(refreshed.salon || null);
+      setCurrentSalonId(refreshed.salon?.id || null);
+      if (refreshed.salon) {
+        setOriginalValues({
+          name: refreshed.salon.name || "",
+          address: refreshed.salon.address || "",
+          city: refreshed.salon.city || "",
+          state: refreshed.salon.state || "",
+          zip: refreshed.salon.zip_code || "",
+          phone: refreshed.salon.phone || "",
+          email: refreshed.salon.email || "",
+          description: refreshed.salon.description || "",
+          timezone: refreshed.salon.timezone || "America/New_York",
+        });
       }
+      setShowForm(false);
+      setIsEditing(false);
     } catch (error) {
-      console.error('Failed to submit registration:', error);
+      console.error("Failed to submit registration:", error);
+      setFormError(parseError(error));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResubmit = async () => {
+  const handleUpdatePending = async (e) => {
+    e.preventDefault();
+    if (!currentSalonId) return;
+    if (!validateForm()) return;
     setLoading(true);
-    
     try {
-      const formData = {
-        salonName,
-        address,
-        phone,
-        description,
-        businessLicense: businessLicense?.name || '',
-        ownerId: user.id,
-        ownerName: user.name,
-        ownerEmail: user.email
-      };
+      const cleanPhone = phone ? phone.replace(/\D/g, "") : "";
 
-      const result = await updateSalonRegistration(applicationId, formData);
-      
-      if (result.success) {
-        setStatus('pending');
-      }
+      const result = await updatePendingApplication(currentSalonId, {
+        name,
+        address,
+        city,
+        state,
+        zip_code: zip,
+        phone: cleanPhone || undefined,
+        email: email || undefined,
+        description,
+        timezone,
+        logoFile,
+        licenseFile,
+      });
+
+      setStatus("pending");
+      setStatusMessage(result.message || "Application updated. Awaiting admin review.");
+      setShowForm(false);
+      setIsEditing(false);
+      await refreshSalonData();
     } catch (error) {
-      console.error('Failed to resubmit registration:', error);
+      setFormError(parseError(error));
     } finally {
       setLoading(false);
     }
   };
 
-  if (status === 'approved') {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center space-y-4">
-          <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto" />
-          <h2>Salon Approved!</h2>
-          <p className="text-gray-600">
-            Your salon <strong>{salonName}</strong> has been verified and is now live on the
-            platform.
-          </p>
-          <Alert className="bg-green-50 border-green-200">
-            <AlertDescription className="text-green-600">
-              You can now manage your salon, accept bookings, and configure your services.
-            </AlertDescription>
-          </Alert>
-          <Button onClick={() => setStatus('not_submitted')}>View Salon Portal</Button>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (status === 'rejected') {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="py-12 text-center space-y-4">
-            <XCircle className="h-16 w-16 text-red-500 mx-auto" />
-            <h2>Application Rejected</h2>
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{rejectionReason}</AlertDescription>
-            </Alert>
-            <div className="flex gap-4 justify-center">
-              <Button onClick={handleResubmit}>Update & Resubmit</Button>
-              <Button variant="outline" onClick={() => setStatus('not_submitted')}>
-                Start New Application
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Common Rejection Reasons</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2 text-sm text-gray-600">
-              <li>• Invalid or expired business license</li>
-              <li>• Incomplete salon information</li>
-              <li>• Unable to verify business address</li>
-              <li>• Missing required documentation</li>
-              <li>• Previous policy violations</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (status === 'pending') {
-    return (
-      <Card>
-        <CardContent className="py-12 text-center space-y-4">
-          <Clock className="h-16 w-16 text-yellow-500 mx-auto" />
-          <h2>Application Under Review</h2>
-          <p className="text-gray-600">
-            Your salon registration is being reviewed by our admin team. This typically takes 1-3
-            business days.
-          </p>
-          <Alert>
-            <AlertDescription>
-              We'll send you an email once your application has been reviewed.
-            </AlertDescription>
-          </Alert>
-          <div className="flex gap-4 justify-center">
-            <Button onClick={() => setStatus('approved')} variant="outline">
-              Simulate Approval
-            </Button>
-            <Button onClick={() => setStatus('rejected')} variant="outline">
-              Simulate Rejection
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const primarySalon = ownedSalon;
+  const isApproved = status === "approved";
+  const isPending = status === "pending";
+  const isRejected = status === "rejected";
+  const canSubmitNew = status === "not_submitted";
+  const canUpdatePending = isPending && !!currentSalonId;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Register Your Salon</CardTitle>
-          <CardDescription>
-            Complete this form to list your salon on the platform
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="salon-name">Salon Name *</Label>
-                <Input
-                  id="salon-name"
-                  value={salonName}
-                  onChange={(e) => setSalonName(e.target.value)}
-                  placeholder="Elite Hair Studio"
-                  required
-                />
-              </div>
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold">Salon Registration</h2>
+            <p className="text-sm text-indigo-100 mt-1">
+              Submit your application. An admin must approve before your owner portal unlocks.
+            </p>
+          </div>
+          {["approved", "pending", "rejected"].includes(status) && (
+            <div className="flex items-center gap-2">
+              {status === "approved" && (
+                <Badge className="bg-white text-green-700 border border-green-200">Approved</Badge>
+              )}
+              {status === "pending" && (
+                <Badge className="bg-white text-yellow-700 border border-yellow-200">Pending Review</Badge>
+              )}
+              {status === "rejected" && (
+                <Badge className="bg-white text-red-700 border border-red-200">Rejected</Badge>
+              )}
+            </div>
+          )}
+        </div>
+        {status === "approved" && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-indigo-50">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>
+              {primarySalon?.name || "Your salon"} is verified. You now have access to the full owner experience.
+            </span>
+          </div>
+        )}
+        {status === "pending" && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-indigo-50">
+            <Clock className="h-4 w-4" />
+            <span>{statusMessage || "Your application is in the admin queue. Typical review is 1-3 business days."}</span>
+          </div>
+        )}
+        {status === "rejected" && (
+          <div className="mt-4 flex items-center gap-2 text-sm text-indigo-50">
+            <AlertCircle className="h-4 w-4" />
+            <span>Your last application was rejected. Update your details and resubmit.</span>
+          </div>
+        )}
+      </div>
 
-              <div>
-                <Label htmlFor="address">Business Address *</Label>
-                <Input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 Main St, New York, NY 10001"
-                  required
-                />
-              </div>
+      {ownedSalon && (
+        <Card>
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <h3 className="text-lg font-semibold">{ownedSalon.name || "Your salon"}</h3>
+              <p className="text-sm text-gray-600">Status: {ownedSalon.status}</p>
+            </div>
+            <Button
+              onClick={() => {
+                const next = !showForm;
+                setShowForm(next);
+                if (!next) {
+                  setIsEditing(false);
+                }
+              }}
+            >
+              {showForm ? "Stop Viewing Application" : "View / Edit Application"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
+      {!isApproved && !isRejected && showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Business Details</CardTitle>
+            <CardDescription>
+              All fields are required unless marked optional.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={canUpdatePending ? handleUpdatePending : handleSubmit} className="space-y-8">
+              {!canSubmitNew && (
+                <div className="flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (isEditing) {
+                        resetToOriginal();
+                      } else {
+                        setIsEditing(true);
+                      }
+                    }}
+                  >
+                    {isEditing ? "Cancel Edit" : "Edit"}
+                  </Button>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Label htmlFor="name">Salon Name *</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Elite Hair Studio"
+                    required
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label htmlFor="address">Street Address *</Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Main St"
+                    required
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="city">City *</Label>
+                  <Input
+                    id="city"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="Newark"
+                    required
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="state">State (2 letters) *</Label>
+                  <Input
+                    id="state"
+                    value={state}
+                    onChange={(e) => setState(e.target.value.toUpperCase())}
+                    maxLength={2}
+                    placeholder="NJ"
+                    required
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="zip">ZIP Code *</Label>
+                  <Input
+                    id="zip"
+                    value={zip}
+                    onChange={(e) => setZip(e.target.value)}
+                    placeholder="07102"
+                    required
+                    disabled={!isEditing}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="timezone">Timezone *</Label>
+                <select
+                  id="timezone"
+                  className={`w-full rounded-md border px-3 py-2 ${!isEditing ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200" : "border-gray-300"}`}
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  disabled={!isEditing}
+                >
+                  <option value="America/New_York">America/New_York (ET)</option>
+                  <option value="America/Chicago">America/Chicago (CT)</option>
+                  <option value="America/Denver">America/Denver (MT)</option>
+                  <option value="America/Los_Angeles">America/Los_Angeles (PT)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="phone">Phone Number *</Label>
+                <Label htmlFor="phone">Phone (10 digits, digits only) *</Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="(555) 123-4567"
-                  required
+                  placeholder="9735551234"
+                  required={!email}
+                  disabled={!isEditing}
                 />
               </div>
-
               <div>
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Tell customers about your salon..."
-                  rows={4}
-                  required
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="owner@salon.com"
+                  required={!phone}
+                  disabled={!isEditing}
                 />
               </div>
+            </div>
 
+            <div>
+              <Label htmlFor="description">Description *</Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Tell customers about your services, vibe, and specialties."
+                rows={4}
+                required
+                disabled={!isEditing}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="logo">Logo (optional)</Label>
+                  <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                    <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-600 mb-2">Upload a square image.</p>
+                  <Input
+                    id="logo"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                    disabled={!isEditing}
+                  />
+                  {!isEditing && existingLogoUrl && (
+                    <p className="text-xs text-gray-500 mt-2 break-all">
+                      Current: <a className="text-indigo-600" href={existingLogoUrl} target="_blank" rel="noreferrer">Logo</a>
+                    </p>
+                  )}
+                  {logoFile && (
+                    <div className="mt-2 text-sm text-gray-700">{logoFile.name}</div>
+                  )}
+                </div>
+              </div>
               <div>
                 <Label htmlFor="license">Business License *</Label>
-                <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-gray-600 mb-2">Upload your business license</p>
-                  <p className="text-xs text-gray-500 mb-3">PDF or Image up to 10MB</p>
-                  <div className="relative">
-                    <Input
-                      id="license"
-                      type="file"
-                      accept=".pdf,image/*"
-                      onChange={(e) => setBusinessLicense(e.target.files?.[0] || null)}
-                      required
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <div className="bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-md px-4 py-2 text-sm font-medium text-gray-700 cursor-pointer transition-colors">
-                      Choose File
-                    </div>
-                  </div>
-                  {businessLicense && (
-                    <Badge className="mt-2">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      {businessLicense.name}
-                    </Badge>
+                <div className="mt-2 border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <Upload className="h-6 w-6 mx-auto mb-2 text-gray-400" />
+                  <p className="text-sm text-gray-600 mb-2">PDF or image up to 10MB.</p>
+                  <Input
+                    id="license"
+                    type="file"
+                    accept=".pdf,image/*"
+                    onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
+                    required={canSubmitNew}
+                    disabled={!isEditing}
+                  />
+                  {!isEditing && existingLicenseUrl && (
+                    <p className="text-xs text-gray-500 mt-2 break-all">
+                      Current: <a className="text-indigo-600" href={existingLicenseUrl} target="_blank" rel="noreferrer">License</a>
+                    </p>
+                  )}
+                  {licenseFile && (
+                    <div className="mt-2 text-sm text-gray-700">{licenseFile.name}</div>
                   )}
                 </div>
               </div>
             </div>
 
-            <Alert>
-              <AlertDescription>
-                All information will be verified by our admin team before approval. Make sure all
-                details are accurate.
-              </AlertDescription>
-            </Alert>
+            {formError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{formError}</AlertDescription>
+              </Alert>
+            )}
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Submitting...' : 'Submit Application'}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading || (!isEditing && !canSubmitNew) || (isPending && !canUpdatePending)}
+            >
+              {loading
+                ? "Saving..."
+                : canUpdatePending
+                  ? "Update Application"
+                  : "Submit Application"}
             </Button>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+      )}
+
+      {isApproved && (
+        <Card>
+          <CardHeader>
+            <CardTitle>What happens next?</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Your salon is approved. Use the dashboard to manage services, employees, and customers.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {isRejected && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Application rejected</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Your application was rejected. Please submit an appeal or contact support to proceed.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
-          <CardTitle>What Happens Next?</CardTitle>
+          <CardTitle>What happens after submission?</CardTitle>
         </CardHeader>
         <CardContent>
           <ol className="space-y-3">
             <li className="flex gap-3">
-              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">
-                1
-              </Badge>
+              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">1</Badge>
               <div>
                 <p>Submit your application</p>
-                <p className="text-xs text-gray-500">
-                  Complete the form with accurate information
-                </p>
+                <p className="text-xs text-gray-500">Provide accurate business info.</p>
               </div>
             </li>
             <li className="flex gap-3">
-              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">
-                2
-              </Badge>
+              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">2</Badge>
               <div>
                 <p>Admin review (1-3 business days)</p>
-                <p className="text-xs text-gray-500">
-                  Our team verifies your business details
-                </p>
+                <p className="text-xs text-gray-500">Admins verify your license.</p>
               </div>
             </li>
             <li className="flex gap-3">
-              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">
-                3
-              </Badge>
+              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">3</Badge>
               <div>
                 <p>Approval notification</p>
-                <p className="text-xs text-gray-500">You'll receive an email confirmation</p>
+                <p className="text-xs text-gray-500">We’ll email you once approved or if updates are needed.</p>
               </div>
             </li>
             <li className="flex gap-3">
-              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">
-                4
-              </Badge>
+              <Badge className="h-6 w-6 rounded-full p-0 flex items-center justify-center">4</Badge>
               <div>
-                <p>Go live!</p>
-                <p className="text-xs text-gray-500">
-                  Start accepting bookings and managing your salon
-                </p>
+                <p>Go live</p>
+                <p className="text-xs text-gray-500">Owner dashboard unlocks; start taking bookings.</p>
               </div>
             </li>
           </ol>

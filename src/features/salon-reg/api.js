@@ -1,74 +1,73 @@
 import { api } from "../../shared/api/client.js";
 
-export async function submitSalonRegistration(formData) {
-  if (import.meta.env.VITE_MOCK === "1") {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return {
-      success: true,
-      applicationId: `APP-${Date.now()}`,
-      status: "pending",
-      message: "Application submitted successfully",
-    };
-  }
+export async function submitSalonRegistration({
+  name,
+  address,
+  city,
+  state,
+  zip_code,
+  phone,
+  email,
+  description,
+  timezone,
+  logoFile,
+  licenseFile,
+}) {
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("address", address);
+  if (city) formData.append("city", city);
+  if (state) formData.append("state", state);
+  if (zip_code) formData.append("zip_code", zip_code);
+  if (phone) formData.append("phone", phone);
+  if (email) formData.append("email", email);
+  if (description) formData.append("description", description);
+  if (timezone) formData.append("timezone", timezone);
+  if (logoFile) formData.append("logo", logoFile);
+  if (licenseFile) formData.append("license", licenseFile);
 
-  return api("/salon/register", {
+  return api("/salons/apply", {
     method: "POST",
-    body: JSON.stringify(formData),
+    body: formData,
   });
 }
 
-export async function getSalonRegistrationStatus(ownerId) {
-  if (import.meta.env.VITE_MOCK === "1") {
-    return (
-      MOCK_SALON_REGISTRATIONS[ownerId] || {
-        status: "not_submitted",
-        applicationId: null,
-        submittedAt: null,
-        reviewedAt: null,
-        rejectionReason: null,
-      }
-    );
-  }
-
-  return api(`/salon/registration/status/${ownerId}`);
+export async function getOwnedSalon() {
+  return api("/salons/mine");
 }
 
-export async function updateSalonRegistration(applicationId, formData) {
-  if (import.meta.env.VITE_MOCK === "1") {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return {
-      success: true,
-      status: "pending",
-      message: "Application updated successfully",
-    };
-  }
+export async function getSalonDetail(salonId) {
+  return api(`/salons/${salonId}`);
+}
 
-  return api(`/salon/registration/${applicationId}`, {
-    method: "PUT",
-    body: JSON.stringify(formData),
+export async function updatePendingApplication(salonId, {
+  name,
+  address,
+  city,
+  state,
+  zip_code,
+  phone,
+  email,
+  description,
+  timezone,
+  logoFile,
+  licenseFile,
+}) {
+  const formData = new FormData();
+  if (name) formData.append("name", name);
+  if (address) formData.append("address", address);
+  if (city) formData.append("city", city);
+  if (state) formData.append("state", state);
+  if (zip_code) formData.append("zip_code", zip_code);
+  if (phone) formData.append("phone", phone);
+  if (email) formData.append("email", email);
+  if (description) formData.append("description", description);
+  if (timezone) formData.append("timezone", timezone);
+  if (logoFile) formData.append("logo", logoFile);
+  if (licenseFile) formData.append("license", licenseFile);
+
+  return api(`/salons/${salonId}/application`, {
+    method: "PATCH",
+    body: formData,
   });
 }
-
-const MOCK_SALON_REGISTRATIONS = {
-  "owner-1": {
-    status: "approved",
-    applicationId: "APP-001",
-    submittedAt: "2025-10-01T10:00:00Z",
-    reviewedAt: "2025-10-02T14:30:00Z",
-    rejectionReason: null,
-  },
-  "owner-2": {
-    status: "pending",
-    applicationId: "APP-002",
-    submittedAt: "2025-10-10T09:15:00Z",
-    reviewedAt: null,
-    rejectionReason: null,
-  },
-  "owner-3": {
-    status: "rejected",
-    applicationId: "APP-003",
-    submittedAt: "2025-10-05T16:20:00Z",
-    reviewedAt: "2025-10-06T11:45:00Z",
-    rejectionReason: "Invalid business license. Please upload a valid license document.",
-  },
-};
