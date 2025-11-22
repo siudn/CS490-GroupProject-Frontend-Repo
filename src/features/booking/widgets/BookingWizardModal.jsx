@@ -41,7 +41,14 @@ export default function BookingWizardModal({ salon, onClose }) {
           serviceId: service.id,
           dateISO,
         });
-        if (alive) setSlots(data);
+        if (alive) {
+          const tz = salon.timezone || "America/New_York";
+          const enriched = (data || []).map((s) => ({
+            ...s,
+            timezone: s.timezone || tz,
+          }));
+          setSlots(enriched);
+        }
       } catch (err) {
         if (alive) setError("Unable to load availability for that day.");
       }
@@ -244,6 +251,7 @@ function Step2SelectService({ services, value, onChange }) {
 }
 
 function Step3DateTime({ dateISO, onDateISO, slots, slot, onSelect, error }) {
+  const tz = slot?.timezone || "America/New_York";
   return (
     <div className="space-y-6">
       <div className="font-medium">Pick Date &amp; Time</div>
@@ -263,7 +271,7 @@ function Step3DateTime({ dateISO, onDateISO, slots, slot, onSelect, error }) {
                   slot?.start_at === s.start_at ? "ring-2 ring-violet-600 border-violet-600" : ""
                 }`}
               >
-                {s.label || toFriendlyTime(new Date(s.start_at).toISOString().slice(11, 16))}
+                {s.label || formatTimeInTz(s.start_at, s.timezone || tz)}
               </button>
             ))}
             {slots.length === 0 && (
@@ -279,14 +287,15 @@ function Step3DateTime({ dateISO, onDateISO, slots, slot, onSelect, error }) {
 }
 
 function Step4Review({ employee, service, slot, note, onNote, error, saving, onConfirm }) {
+  const tz = slot?.timezone || "America/New_York";
   return (
     <div className="space-y-4">
       <div className="font-medium">Review &amp; Confirm</div>
       <div className="rounded-xl border p-4 text-sm text-gray-700 space-y-1">
         <div>• Barber: {employee?.name}</div>
         <div>• Service: {service?.name}</div>
-        <div>• Date: {slot ? toReadable(slot.start_at) : "--"}</div>
-        <div>• Time: {slot ? new Date(slot.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--"}</div>
+        <div>• Date: {slot ? toReadable(slot.start_at, tz) : "--"}</div>
+        <div>• Time: {slot ? formatTimeInTz(slot.start_at, tz) : "--"}</div>
       </div>
       <textarea
         value={note}
@@ -308,6 +317,7 @@ function Step4Review({ employee, service, slot, note, onNote, error, saving, onC
 }
 
 function ConfirmationSummary({ appointment, onClose }) {
+  const tz = appointment?.timezone || "America/New_York";
   return (
     <div className="space-y-4 text-center">
       <div className="mx-auto size-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl">
@@ -315,8 +325,8 @@ function ConfirmationSummary({ appointment, onClose }) {
       </div>
       <h2 className="text-xl font-semibold text-gray-900">Appointment Confirmed</h2>
       <p className="text-sm text-gray-600">
-        We’ve scheduled your service for {toReadable(appointment.start_at)} at{" "}
-        {new Date(appointment.start_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.
+        We’ve scheduled your service for {toReadable(appointment.start_at, tz)} at{" "}
+        {formatTimeInTz(appointment.start_at, tz)}.
       </p>
       <button
         onClick={onClose}
@@ -329,7 +339,7 @@ function ConfirmationSummary({ appointment, onClose }) {
 }
 
 function Calendar({ dateISO, onDateISO }) {
-  const d = new Date(dateISO);
+  const d = parseISODate(dateISO);
   const ym = new Date(d.getFullYear(), d.getMonth(), 1);
   const days = buildCalendarDays(dateISO);
   const prev = () => onDateISO(toISO(new Date(d.getFullYear(), d.getMonth() - 1, d.getDate())));
@@ -363,7 +373,7 @@ function Calendar({ dateISO, onDateISO }) {
 }
 
 function buildCalendarDays(dateISO) {
-  const d = new Date(dateISO);
+  const d = parseISODate(dateISO);
   const y = d.getFullYear(), m = d.getMonth();
   const first = new Date(y, m, 1);
   const start = new Date(y, m, 1 - first.getDay());
@@ -384,22 +394,44 @@ function buildCalendarDays(dateISO) {
 
 function toISO(d) {
   const copy = new Date(d);
-  return new Date(copy.getFullYear(), copy.getMonth(), copy.getDate()).toISOString().slice(0, 10);
+  const y = copy.getFullYear();
+  const m = String(copy.getMonth() + 1).padStart(2, "0");
+  const day = String(copy.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseISODate(dateISO) {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  return new Date(y || 0, (m || 1) - 1, d || 1);
 }
 
 function stripTime(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-function toFriendlyTime(hhmm) {
-  if (!hhmm) return "";
-  const [h, m] = hhmm.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hh = ((h + 11) % 12) + 1;
-  return `${hh}:${m.toString().padStart(2, "0")} ${ampm}`;
+function formatTimeInTz(iso, tz = "America/New_York") {
+  if (!iso) return "";
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  } catch (e) {
+    return "";
+  }
 }
 
-function toReadable(iso) {
+function toReadable(iso, tz = "America/New_York") {
   if (!iso) return "";
-  return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  try {
+    return new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(iso));
+  } catch (e) {
+    return "";
+  }
 }

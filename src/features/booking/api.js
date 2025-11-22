@@ -70,6 +70,14 @@ export async function createAppointment(payload) {
   });
 }
 
+export async function updateAppointment(payload) {
+  if (!payload?.id) throw new Error("Appointment update requires an id.");
+  return api("/appointments", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function rescheduleAppointment(id, update) {
   return api(`/appointments/${id}/reschedule`, {
     method: "PATCH",
