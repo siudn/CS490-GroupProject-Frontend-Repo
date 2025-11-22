@@ -105,7 +105,8 @@ export default function Header() {
           return (
             <>
               <NavLink to="/salon-dashboard" className={linkClass}>Dashboard</NavLink>
-              <NavLink to="/salon-registration" className={linkClass}>Registration</NavLink>
+              <NavLink to="/salon-settings" className={linkClass}>Settings</NavLink>
+              <NavLink to="/employees" className={linkClass}>Employees</NavLink>
               <NavLink to="/clients" className={linkClass}>Customers</NavLink>
               <NavLink to="/loyalty-program" className={linkClass}>Loyalty Program</NavLink>
               <NavLink to="/retail" className={linkClass}>My Shop</NavLink>

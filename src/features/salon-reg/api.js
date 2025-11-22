@@ -193,3 +193,114 @@ export async function addServiceToBarber(salonId, barberId, serviceId) {
 export async function getBarberServices(salonId, barberId) {
   return api(`/salons/${salonId}/barbers/${barberId}/services`);
 }
+
+// Update verified salon
+export async function updateSalon(salonId, updates, logoFile = null) {
+  if (logoFile) {
+    const formData = new FormData();
+    Object.keys(updates).forEach(key => {
+      formData.append(key, updates[key]);
+    });
+    formData.append('logo', logoFile);
+    return api(`/salons/${salonId}`, {
+      method: "PATCH",
+      body: formData,
+    });
+  } else {
+    return api(`/salons/${salonId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+  }
+}
+
+// Update service
+export async function updateService(serviceId, salonId, updates) {
+  return api(`/services/${serviceId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ ...updates, salon_id: salonId }),
+  });
+}
+
+// Delete service
+export async function deleteService(serviceId, salonId) {
+  return api(`/services/${serviceId}?salon_id=${salonId}`, {
+    method: "DELETE",
+  });
+}
+
+// Remove employee
+export async function removeEmployee(salonId, barberId) {
+  return api(`/salons/${salonId}/employees/${barberId}`, {
+    method: "DELETE",
+  });
+}
+
+// Get salon customers
+export async function getSalonCustomers(salonId) {
+  return api(`/salons/${salonId}/customers`);
+}
+
+// Respond to review
+export async function respondToReview(reviewId, message) {
+  return api(`/reviews/${reviewId}/response`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
+// Get customer appointments (for salon owner)
+export async function getCustomerAppointments(salonId, customerId, page = 1, limit = 20, when = "all", status = null) {
+  // Salon owners can filter by customer_id, the endpoint will return all salon appointments filtered by customer
+  let url = `/appointments?customer_id=${customerId}&salon_id=${salonId}&when=${when}&page=${page}&limit=${limit}`;
+  if (status) {
+    url += `&status=${status}`;
+  }
+  const res = await api(url);
+  // Handle both array and object response formats
+  if (Array.isArray(res)) {
+    return { appointments: res, count: res.length, page: 1, limit: res.length };
+  }
+  return res;
+}
+
+// Update appointment status
+export async function updateAppointmentStatus(appointmentId, status, cancellationReason = null) {
+  const payload = { id: appointmentId, status };
+  if (cancellationReason) {
+    payload.cancellation_reason = cancellationReason;
+  }
+  return await api(`/appointments`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+// Mark appointment as completed or no-show
+export async function markAppointmentComplete(appointmentId, status) {
+  return await api(`/appointments/${appointmentId}/complete`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+// Update employee (barber) information
+export async function updateEmployee(salonId, barberId, updates) {
+  return await api(`/salons/${salonId}/employees/${barberId}`, {
+    method: "PATCH",
+    body: JSON.stringify(updates),
+  });
+}
+
+// Get employee availability
+export async function getEmployeeAvailability(salonId, barberId) {
+  return await api(`/salons/${salonId}/employees/${barberId}/availability`);
+}
+
+// Set employee availability (POST for create, PATCH for update)
+export async function setEmployeeAvailability(salonId, barberId, availability, method = "POST") {
+  return await api(`/salons/${salonId}/employees/${barberId}/availability`, {
+    method: method,
+    body: JSON.stringify({ availability }),
+  });
+}
