@@ -33,7 +33,8 @@ export function clearTokens() {
 
 export async function api(path, opts = {}) {
   const token = getAccessToken();
-  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+  const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  const headers = isFormData ? { ...(opts.headers || {}) } : { "Content-Type": "application/json", ...(opts.headers || {}) };
   
   // Add Bearer token if available
   if (token) {
