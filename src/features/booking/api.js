@@ -92,10 +92,24 @@ export async function cancelAppointment(id, reason) {
   });
 }
 
-export async function submitReview(id, { stars, comment }) {
-  return api(`/appointments/${id}/review`, {
+export async function submitReview(appointmentId, { stars, comment }) {
+  return api(`/reviews/`, {
     method: "POST",
-    body: JSON.stringify({ stars, comment }),
+    body: JSON.stringify({ 
+      appointment_id: appointmentId,
+      rating: stars,
+      comment: comment || "",
+    }),
+  });
+}
+
+export async function updateReview(reviewId, { stars, comment }) {
+  return api(`/reviews/${reviewId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ 
+      rating: stars,
+      comment: comment || "",
+    }),
   });
 }
 
