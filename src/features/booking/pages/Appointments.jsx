@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { listUserAppointments, submitReview, updateAppointment } from "../api.js";
+import { listUserAppointments, submitReview, updateReview, updateAppointment } from "../api.js";
 import AppointmentCard from "../components/AppointmentCard.jsx";
 import RescheduleModal from "../widgets/RescheduleModal.jsx";
 import CancelModal from "../widgets/CancelModal.jsx";
@@ -39,13 +39,19 @@ export default function Appointments() {
   function onCancel(appt) { setCancelAppt(appt); }
 
   // apply updates from modals
-  async function handleSubmitReview(id, payload) {
+  async function handleSubmitReview(id, payload, reviewId = null) {
     const clean = {
       stars: payload.stars,
       comment: payload.comment?.trim() ?? "",
     };
 
-    await submitReview(id, clean);
+    if (reviewId) {
+      // Update existing review
+      await updateReview(reviewId, clean);
+    } else {
+      // Create new review
+      await submitReview(id, clean);
+    }
     await load();
   }
 

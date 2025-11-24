@@ -286,6 +286,12 @@ function Review({ review }) {
         </div>
       </div>
       <p className="mt-2 text-gray-700 text-sm">{review.text || "No written feedback."}</p>
+      {review.response && (
+        <div className="mt-3 p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+          <div className="text-sm font-medium text-indigo-900 mb-1">Owner Response:</div>
+          <div className="text-sm text-indigo-800">{review.response.response_text}</div>
+        </div>
+      )}
     </div>
   );
 }
