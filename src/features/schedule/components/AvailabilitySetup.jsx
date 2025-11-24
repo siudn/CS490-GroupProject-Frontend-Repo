@@ -180,17 +180,9 @@ export default function AvailabilitySetup() {
         reset({ days: nextDays });
       })
       .catch((err) => {
-        const errorMessage = err instanceof Error ? err.message : "Failed to load availability.";
-        // Check if it's a barber profile not found error
-        if (errorMessage.includes("Barber profile not found") || 
-            errorMessage.includes("Missing barber_id") ||
-            errorMessage.includes("Barber not found")) {
-          setLoadError(
-            "Barber profile not found. Please ensure your account is associated with a barber profile. Contact your salon owner or administrator."
-          );
-        } else {
-          setLoadError(errorMessage);
-        }
+        setLoadError(
+          err instanceof Error ? err.message : "Failed to load availability."
+        );
       })
       .finally(() => {
         setLoading(false);
@@ -352,19 +344,11 @@ export default function AvailabilitySetup() {
           <p className="text-red-600 mt-4">{errors.days.message}</p>
         )}
 
-        <div className="mt-8 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => reset({ days: defaultDayState })}
-            disabled={loading || saving}
-            className="px-6 py-2 bg-gray-100 border border-gray-300 text-gray-900 rounded-md hover:bg-gray-200 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            Reset
-          </button>
+        <div className="mt-8 flex justify-end">
           <button
             type="submit"
             disabled={loading || saving}
-            className="px-6 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+            className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {saving ? "Saving..." : loading ? "Loading..." : "Save Availability"}
           </button>
@@ -373,4 +357,3 @@ export default function AvailabilitySetup() {
     </div>
   );
 }
-
