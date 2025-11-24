@@ -45,14 +45,18 @@ export default function Appointments() {
       comment: payload.comment?.trim() ?? "",
     };
 
+    let result;
     if (reviewId) {
       // Update existing review
-      await updateReview(reviewId, clean);
+      result = await updateReview(reviewId, clean);
     } else {
       // Create new review
-      await submitReview(id, clean);
+      result = await submitReview(id, clean);
     }
-    await load();
+    
+    // Return result first so images can be uploaded before reloading
+    // The component will handle the reload after images are uploaded
+    return result;
   }
 
   async function saveNote(apptId, noteText) {
@@ -154,13 +158,14 @@ export default function Appointments() {
           <div className="space-y-4">
             {past.map((a) => (
               <AppointmentCard key={a.id} appt={a} compact>
-                {a.status === "completed" ? (
+                {a.status === "completed" && !a.review ? (
                   <PostAppointmentReview
                     appointmentId={a.id}
                     existingReview={a.review}
                     salonName={a.salon?.name}
                     employeeName={a.barber?.name || a.employee?.name}
                     onSubmit={handleSubmitReview}
+                    onReviewSubmitted={load}
                   />
                 ) : null}
               </AppointmentCard>

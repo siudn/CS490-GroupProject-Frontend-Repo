@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getSalon, getSalonReviews } from "../api.js";
+import { getSalon, getSalonReviews, getFullReview, refreshSignedUrl } from "../api.js";
 import BookingWizardModal from "../widgets/BookingWizardModal.jsx";
 import { useAuth } from "../../auth/auth-provider.jsx";
 
@@ -21,7 +21,41 @@ export default function SalonProfile() {
         const r = await getSalonReviews(id);
         if (!alive) return;
         setSalon(s);
-        setReviews(r);
+        
+        // Fetch full review data including images and responses
+        const reviewsWithDetails = await Promise.all(
+          r.map(async (review) => {
+            try {
+              const fullReview = await getFullReview(review.id);
+              
+              // Refresh signed URLs for images that don't have them
+              if (fullReview.images && fullReview.images.length > 0) {
+                fullReview.images = await Promise.all(
+                  fullReview.images.map(async (img) => {
+                    if (img.signed_url) return img;
+                    if (img.file_url) {
+                      try {
+                        const result = await refreshSignedUrl(img.file_url, "review-images");
+                        return { ...img, signed_url: result.signed_url };
+                      } catch (err) {
+                        console.error(`Failed to refresh signed URL for ${img.file_url}:`, err);
+                        return img;
+                      }
+                    }
+                    return img;
+                  })
+                );
+              }
+              
+              return fullReview;
+            } catch (err) {
+              console.error(`Failed to fetch full review ${review.id}:`, err);
+              return review; // Fallback to basic review data
+            }
+          })
+        );
+        
+        setReviews(reviewsWithDetails);
       } finally {
         if (alive) setLoading(false);
       }
@@ -32,11 +66,11 @@ export default function SalonProfile() {
   const filteredReviews = useMemo(() => {
     if (reviewFilter === "all") return reviews;
     if (reviewFilter === "with-text") {
-      return reviews.filter((r) => r.text && r.text.trim().length > 0);
+      return reviews.filter((r) => (r.text || r.comment) && (r.text || r.comment).trim().length > 0);
     }
     if (reviewFilter.startsWith("star-")) {
       const target = Number(reviewFilter.split("-")[1]);
-      return reviews.filter((r) => r.stars === target);
+      return reviews.filter((r) => (r.stars || r.rating) === target);
     }
     return reviews;
   }, [reviews, reviewFilter]);
@@ -44,7 +78,7 @@ export default function SalonProfile() {
   const distribution = useMemo(() => {
     const counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
     reviews.forEach((r) => {
-      const stars = Math.min(Math.max(r.stars, 1), 5);
+      const stars = Math.min(Math.max(r.stars || r.rating || 0, 1), 5);
       counts[stars] += 1;
     });
     const total = reviews.length || 1;
@@ -181,7 +215,7 @@ export default function SalonProfile() {
         distribution={distribution}
         activeFilter={reviewFilter}
         onFilterChange={setReviewFilter}
-        hasWrittenReviews={reviews.some((r) => r.text?.trim())}
+        hasWrittenReviews={reviews.some((r) => (r.text || r.comment)?.trim())}
       />
     </div>
   );
@@ -276,20 +310,70 @@ function ReviewSection({
 }
 
 function Review({ review }) {
+  const stars = review.stars || review.rating || 0;
+  const images = review.images || [];
+  const beforeImages = images.filter(img => img.label === "before" || img.type === "before");
+  const afterImages = images.filter(img => img.label === "after" || img.type === "after");
+
   return (
     <div className="rounded-xl border p-4 bg-white">
       <div className="flex items-center justify-between">
         <div className="font-medium">{review.user?.name || "Guest"}</div>
         <div className="text-yellow-500">
-          {"★".repeat(review.stars)}
-          <span className="text-gray-300">{"★".repeat(5 - review.stars)}</span>
+          {"★".repeat(stars)}
+          <span className="text-gray-300">{"★".repeat(5 - stars)}</span>
         </div>
       </div>
-      <p className="mt-2 text-gray-700 text-sm">{review.text || "No written feedback."}</p>
+      <p className="mt-2 text-gray-700 text-sm">{review.text || review.comment || "No written feedback."}</p>
+      
+      {/* Before/After Image Gallery */}
+      {(beforeImages.length > 0 || afterImages.length > 0) && (
+        <div className="mt-3 flex flex-col md:flex-row gap-4">
+          {beforeImages.length > 0 && (
+            <div className="flex-1">
+              <h4 className="text-xs font-medium text-gray-600 mb-2">Before</h4>
+              <div className="flex gap-2 flex-wrap">
+                {beforeImages.map((img) => (
+                  <img
+                    key={img.id}
+                    src={img.url || img.signed_url}
+                    alt="Before"
+                    className="h-48 w-48 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                    onClick={() => {
+                      const url = img.url || img.signed_url;
+                      if (url) window.open(url, "_blank");
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {afterImages.length > 0 && (
+            <div className="flex-1">
+              <h4 className="text-xs font-medium text-gray-600 mb-2">After</h4>
+              <div className="flex gap-2 flex-wrap">
+                {afterImages.map((img) => (
+                  <img
+                    key={img.id}
+                    src={img.url || img.signed_url}
+                    alt="After"
+                    className="h-48 w-48 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                    onClick={() => {
+                      const url = img.url || img.signed_url;
+                      if (url) window.open(url, "_blank");
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
       {review.response && (
         <div className="mt-3 p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
           <div className="text-sm font-medium text-indigo-900 mb-1">Owner Response:</div>
-          <div className="text-sm text-indigo-800">{review.response.response_text}</div>
+          <div className="text-sm text-indigo-800">{review.response.response_text || review.response.text}</div>
         </div>
       )}
     </div>
