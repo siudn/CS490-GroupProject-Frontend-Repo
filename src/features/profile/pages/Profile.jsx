@@ -1,34 +1,39 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../../features/auth/auth-provider.jsx";
-import { getUserProfile, updateUserProfile, getUserPreferences, updateUserPreferences } from "../../features/customer/api.js";
-import { listUserAppointments } from "../../features/booking/api.js";
-import { getCustomerPoints } from "../../features/loyalty/api.js";
-import { Card } from "../../shared/ui/card.jsx";
-import { Button } from "../../shared/ui/button.jsx";
-import { Input } from "../../shared/ui/input.jsx";
-import { Label } from "../../shared/ui/label.jsx";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../shared/ui/tabs.jsx";
-import { Badge } from "../../shared/ui/badge.jsx";
+import { useAuth } from "../../auth/auth-provider.jsx";
+import { getCurrentUserProfile, updateUserProfile, uploadProfileImage } from "../api.js";
+import { listUserAppointments } from "../../booking/api.js";
+import { getCustomerPoints } from "../../loyalty/api.js";
+import { Card } from "../../../shared/ui/card.jsx";
+import { Button } from "../../../shared/ui/button.jsx";
+import { Input } from "../../../shared/ui/input.jsx";
+import { Label } from "../../../shared/ui/label.jsx";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../shared/ui/tabs.jsx";
+import { Badge } from "../../../shared/ui/badge.jsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../shared/ui/select.jsx";
+import { ImageWithFallback } from "../../../shared/ui/ImageWithFallback.jsx";
+
+const AGE_BRACKETS = ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"];
+const GENDERS = ["male", "female", "non-binary", "prefer-not-to-say", "other"];
 
 export default function Profile() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [isEditingPreferences, setIsEditingPreferences] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
   // Data states
   const [profile, setProfile] = useState(null);
-  const [preferences, setPreferences] = useState(null);
-  const [appointments, setAppointments] = useState({ active: [], history: [] });
+  const [appointments, setAppointments] = useState({ upcoming: [], past: [] });
   const [loyaltyData, setLoyaltyData] = useState([]);
 
   // Form states
   const [profileForm, setProfileForm] = useState({});
-  const [preferencesForm, setPreferencesForm] = useState({});
+
+  const isCustomer = user?.role === "customer";
 
   useEffect(() => {
     loadAllData();
@@ -38,23 +43,69 @@ export default function Profile() {
     setLoading(true);
     setError(null);
     try {
-      const [profileData, preferencesData, appointmentsData, loyaltyDataRes] = await Promise.all([
-        getUserProfile(),
-        getUserPreferences(),
-        listUserAppointments(),
-        getCustomerPoints(),
-      ]);
-      
+      const profileData = await getCurrentUserProfile();
       setProfile(profileData);
-      setProfileForm(profileData);
-      setPreferences(preferencesData);
-      setPreferencesForm(preferencesData);
-      setAppointments(appointmentsData);
-      setLoyaltyData(loyaltyDataRes);
+      // Map backend snake_case to form camelCase for display
+      setProfileForm({
+        first_name: profileData?.first_name || "",
+        last_name: profileData?.last_name || "",
+        email: profileData?.email || "",
+        phone: profileData?.phone || "",
+        profile_image_url: profileData?.profile_image_url || "",
+        date_of_birth: profileData?.date_of_birth || "",
+        city: profileData?.city || "",
+        state: profileData?.state || "",
+        age_bracket: profileData?.age_bracket || null,
+        gender: profileData?.gender || null,
+      });
+
+      // Load customer-specific data only for customers
+      if (isCustomer) {
+        try {
+          const [appointmentsData, loyaltyDataRes] = await Promise.all([
+            listUserAppointments(),
+            getCustomerPoints(),
+          ]);
+          setAppointments(appointmentsData);
+          setLoyaltyData(loyaltyDataRes);
+        } catch (err) {
+          console.error("Failed to load customer data:", err);
+        }
+      }
     } catch (err) {
-      setError("Failed to load profile data: " + err.message);
+      setError("Failed to load profile data: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleImageUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must be less than 5MB");
+      return;
+    }
+
+    setUploadingImage(true);
+    setError(null);
+    try {
+      const signedUrl = await uploadProfileImage(file);
+      setProfileForm({ ...profileForm, profile_image_url: signedUrl });
+      setSuccessMessage("Image uploaded successfully!");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setError("Failed to upload image: " + (err.message || "Unknown error"));
+    } finally {
+      setUploadingImage(false);
     }
   }
 
@@ -62,47 +113,93 @@ export default function Profile() {
     setSaving(true);
     setError(null);
     setSuccessMessage(null);
+
+    // Frontend validation
+    if (profileForm.first_name && profileForm.first_name.length > 100) {
+      setError("First name must be 100 characters or less");
+      setSaving(false);
+      return;
+    }
+    if (profileForm.last_name && profileForm.last_name.length > 100) {
+      setError("Last name must be 100 characters or less");
+      setSaving(false);
+      return;
+    }
+    if (profileForm.phone && profileForm.phone.length > 20) {
+      setError("Phone number must be 20 characters or less");
+      setSaving(false);
+      return;
+    }
+    if (profileForm.city && profileForm.city.length > 100) {
+      setError("City must be 100 characters or less");
+      setSaving(false);
+      return;
+    }
+    if (profileForm.state && profileForm.state.length > 50) {
+      setError("State must be 50 characters or less");
+      setSaving(false);
+      return;
+    }
+
     try {
-      const result = await updateUserProfile(profileForm);
-      setProfile(result.profile || profileForm);
+      // Only send fields that have values (partial update)
+      const updateData = {};
+      if (profileForm.first_name !== undefined) updateData.first_name = profileForm.first_name || null;
+      if (profileForm.last_name !== undefined) updateData.last_name = profileForm.last_name || null;
+      if (profileForm.phone !== undefined) updateData.phone = profileForm.phone || null;
+      if (profileForm.profile_image_url !== undefined) updateData.profile_image_url = profileForm.profile_image_url || null;
+      if (profileForm.date_of_birth !== undefined) updateData.date_of_birth = profileForm.date_of_birth || null;
+      if (profileForm.city !== undefined) updateData.city = profileForm.city || null;
+      if (profileForm.state !== undefined) updateData.state = profileForm.state || null;
+      if (profileForm.age_bracket !== undefined) updateData.age_bracket = profileForm.age_bracket || null;
+      if (profileForm.gender !== undefined) updateData.gender = profileForm.gender || null;
+
+      const result = await updateUserProfile(updateData);
+      setProfile({ ...profile, ...result });
       setIsEditingProfile(false);
       setSuccessMessage("Profile updated successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError("Failed to update profile: " + err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleSavePreferences() {
-    setSaving(true);
-    setError(null);
-    setSuccessMessage(null);
-    try {
-      const result = await updateUserPreferences(preferencesForm);
-      setPreferences(result.preferences || preferencesForm);
-      setIsEditingPreferences(false);
-      setSuccessMessage("Preferences updated successfully!");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError("Failed to update preferences: " + err.message);
+      const errorMessage = err.message || "Unknown error";
+      // Try to parse error details if available
+      if (errorMessage.includes("details")) {
+        try {
+          const errorObj = JSON.parse(errorMessage);
+          if (errorObj.details && Array.isArray(errorObj.details)) {
+            const detailMessages = errorObj.details.map(d => d.msg || d.message).join(", ");
+            setError(`Validation failed: ${detailMessages}`);
+          } else {
+            setError(errorObj.error || errorMessage);
+          }
+        } catch {
+          setError(errorMessage);
+        }
+      } else {
+        setError("Failed to update profile: " + errorMessage);
+      }
     } finally {
       setSaving(false);
     }
   }
 
   function handleCancelProfile() {
-    setProfileForm(profile);
+    // Reset form to original profile data
+    setProfileForm({
+      first_name: profile?.first_name || "",
+      last_name: profile?.last_name || "",
+      email: profile?.email || "",
+      phone: profile?.phone || "",
+      profile_image_url: profile?.profile_image_url || "",
+      date_of_birth: profile?.date_of_birth || "",
+      city: profile?.city || "",
+      state: profile?.state || "",
+      age_bracket: profile?.age_bracket || null,
+      gender: profile?.gender || null,
+    });
     setIsEditingProfile(false);
     setError(null);
   }
 
-  function handleCancelPreferences() {
-    setPreferencesForm(preferences);
-    setIsEditingPreferences(false);
-    setError(null);
-  }
 
   if (loading) {
     return (
@@ -117,11 +214,16 @@ export default function Profile() {
     );
   }
 
+  const tabs = ["profile"];
+  if (isCustomer) {
+    tabs.push("history", "loyalty");
+  }
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">My Account</h1>
-        <p className="text-gray-600">Manage your profile, preferences, and view your appointment history.</p>
+        <h1 className="text-3xl font-bold mb-2">My Profile</h1>
+        <p className="text-gray-600">Manage your profile information and preferences.</p>
       </div>
 
       {error && (
@@ -137,11 +239,14 @@ export default function Profile() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-8">
+        <TabsList className={`grid w-full mb-8 ${tabs.length === 1 ? "grid-cols-1" : tabs.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
           <TabsTrigger value="profile">Profile Info</TabsTrigger>
-          <TabsTrigger value="preferences">Notifications</TabsTrigger>
-          <TabsTrigger value="history">Visit History</TabsTrigger>
-          <TabsTrigger value="loyalty">Loyalty Points</TabsTrigger>
+          {isCustomer && (
+            <>
+              <TabsTrigger value="history">Visit History</TabsTrigger>
+              <TabsTrigger value="loyalty">Loyalty Points</TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         {/* Profile Info Tab */}
@@ -153,7 +258,7 @@ export default function Profile() {
                 <Button onClick={() => setIsEditingProfile(true)}>Edit Profile</Button>
               ) : (
                 <div className="space-x-2">
-                  <Button onClick={handleSaveProfile} disabled={saving}>
+                  <Button onClick={handleSaveProfile} disabled={saving || uploadingImage}>
                     {saving ? "Saving..." : "Save Changes"}
                   </Button>
                   <Button variant="outline" onClick={handleCancelProfile}>Cancel</Button>
@@ -161,24 +266,69 @@ export default function Profile() {
               )}
             </div>
 
+            {/* Profile Image */}
+            <div className="mb-6">
+              <Label>Profile Image</Label>
+              <div className="flex items-center gap-4 mt-2">
+                <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                  {profileForm.profile_image_url ? (
+                    <ImageWithFallback
+                      src={profileForm.profile_image_url}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-gray-400 text-2xl">?</span>
+                  )}
+                </div>
+                {isEditingProfile && (
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      className="hidden"
+                      id="profile-image-upload"
+                    />
+                    <Label htmlFor="profile-image-upload">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        as="span"
+                        disabled={uploadingImage}
+                        className="cursor-pointer"
+                      >
+                        {uploadingImage ? "Uploading..." : "Upload Image"}
+                      </Button>
+                    </Label>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="first_name">First Name</Label>
                 <Input
-                  id="firstName"
-                  value={profileForm.firstName || ""}
-                  onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+                  id="first_name"
+                  value={profileForm.first_name || ""}
+                  onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
                   disabled={!isEditingProfile}
+                  maxLength={100}
+                  placeholder="Enter first name"
                 />
               </div>
 
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="last_name">Last Name</Label>
                 <Input
-                  id="lastName"
-                  value={profileForm.lastName || ""}
-                  onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
+                  id="last_name"
+                  value={profileForm.last_name || ""}
+                  onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
                   disabled={!isEditingProfile}
+                  maxLength={100}
+                  placeholder="Enter last name"
                 />
               </div>
 
@@ -188,9 +338,10 @@ export default function Profile() {
                   id="email"
                   type="email"
                   value={profileForm.email || ""}
-                  onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                  disabled={!isEditingProfile}
+                  disabled
+                  className="bg-gray-50"
                 />
+                <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
               </div>
 
               <div>
@@ -201,371 +352,244 @@ export default function Profile() {
                   value={profileForm.phone || ""}
                   onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
                   disabled={!isEditingProfile}
+                  maxLength={20}
+                  placeholder="Enter phone number"
                 />
               </div>
 
               <div>
-                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Label htmlFor="date_of_birth">Date of Birth</Label>
                 <Input
-                  id="dateOfBirth"
+                  id="date_of_birth"
                   type="date"
-                  value={profileForm.dateOfBirth || ""}
-                  onChange={(e) => setProfileForm({ ...profileForm, dateOfBirth: e.target.value })}
+                  value={profileForm.date_of_birth || ""}
+                  onChange={(e) => setProfileForm({ ...profileForm, date_of_birth: e.target.value })}
                   disabled={!isEditingProfile}
                 />
               </div>
 
               <div>
-                <Label>Member Since</Label>
+                <Label htmlFor="age_bracket">Age Bracket</Label>
+                <Select
+                  value={profileForm.age_bracket || undefined}
+                  onValueChange={(value) => setProfileForm({ ...profileForm, age_bracket: value === "__none__" ? null : value })}
+                  disabled={!isEditingProfile}
+                >
+                  <SelectTrigger id="age_bracket">
+                    <SelectValue placeholder="Select age bracket" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {AGE_BRACKETS.map(bracket => (
+                      <SelectItem key={bracket} value={bracket}>{bracket}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="gender">Gender</Label>
+                <Select
+                  value={profileForm.gender || undefined}
+                  onValueChange={(value) => setProfileForm({ ...profileForm, gender: value === "__none__" ? null : value })}
+                  disabled={!isEditingProfile}
+                >
+                  <SelectTrigger id="gender">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {GENDERS.map(gender => (
+                      <SelectItem key={gender} value={gender}>
+                        {gender.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="city">City</Label>
                 <Input
-                  value={profile?.memberSince ? new Date(profile.memberSince).toLocaleDateString() : "N/A"}
-                  disabled
+                  id="city"
+                  value={profileForm.city || ""}
+                  onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
+                  disabled={!isEditingProfile}
+                  maxLength={100}
+                  placeholder="Enter city"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="state">State</Label>
+                <Input
+                  id="state"
+                  value={profileForm.state || ""}
+                  onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+                  disabled={!isEditingProfile}
+                  maxLength={50}
+                  placeholder="Enter state"
                 />
               </div>
             </div>
-
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-4">Address</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="md:col-span-2">
-                  <Label htmlFor="street">Street Address</Label>
-                  <Input
-                    id="street"
-                    value={profileForm.address?.street || ""}
-                    onChange={(e) => setProfileForm({
-                      ...profileForm,
-                      address: { ...profileForm.address, street: e.target.value }
-                    })}
-                    disabled={!isEditingProfile}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={profileForm.address?.city || ""}
-                    onChange={(e) => setProfileForm({
-                      ...profileForm,
-                      address: { ...profileForm.address, city: e.target.value }
-                    })}
-                    disabled={!isEditingProfile}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={profileForm.address?.state || ""}
-                    onChange={(e) => setProfileForm({
-                      ...profileForm,
-                      address: { ...profileForm.address, state: e.target.value }
-                    })}
-                    disabled={!isEditingProfile}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="zipCode">ZIP Code</Label>
-                  <Input
-                    id="zipCode"
-                    value={profileForm.address?.zipCode || ""}
-                    onChange={(e) => setProfileForm({
-                      ...profileForm,
-                      address: { ...profileForm.address, zipCode: e.target.value }
-                    })}
-                    disabled={!isEditingProfile}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="country">Country</Label>
-                  <Input
-                    id="country"
-                    value={profileForm.address?.country || ""}
-                    onChange={(e) => setProfileForm({
-                      ...profileForm,
-                      address: { ...profileForm.address, country: e.target.value }
-                    })}
-                    disabled={!isEditingProfile}
-                  />
-                </div>
-              </div>
-            </div>
           </Card>
         </TabsContent>
 
-        {/* Preferences Tab */}
-        <TabsContent value="preferences" className="space-y-6">
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-semibold">Notification Settings</h2>
-              {!isEditingPreferences ? (
-                <Button onClick={() => setIsEditingPreferences(true)}>Edit Settings</Button>
+        {/* Visit History Tab - Customer Only */}
+        {isCustomer && (
+          <TabsContent value="history" className="space-y-6">
+            <Card className="p-6">
+              <h2 className="text-2xl font-semibold mb-6">Appointment History</h2>
+
+              {appointments.past && appointments.past.length > 0 ? (
+                <div className="space-y-4">
+                  {appointments.past.map((appt) => (
+                    <div
+                      key={appt.id}
+                      className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold text-lg">{appt.salon?.name}</h3>
+                            <Badge variant={appt.status === "completed" ? "default" : "outline"}>
+                              {appt.status}
+                            </Badge>
+                          </div>
+                          <p className="text-gray-600 text-sm mb-1">{appt.salon?.address}</p>
+                          <p className="text-gray-700 mb-1">
+                            <span className="font-medium">Service:</span> {appt.service?.name}
+                          </p>
+                          <p className="text-gray-700 mb-1">
+                            <span className="font-medium">Provider:</span> {appt.employee?.name}
+                          </p>
+                          <p className="text-gray-700">
+                            <span className="font-medium">Date:</span>{" "}
+                            {appt.whenISO ? new Date(appt.whenISO).toLocaleDateString() : "N/A"} at{" "}
+                            {appt.whenISO ? new Date(appt.whenISO).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "N/A"}
+                          </p>
+                          {appt.cancellation_reason && (
+                            <p className="text-red-600 text-sm mt-2">
+                              <span className="font-medium">Cancellation reason:</span> {appt.cancellation_reason}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold">${appt.service?.price || "N/A"}</p>
+                          <p className="text-sm text-gray-500">{appt.payment_status || "N/A"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <div className="space-x-2">
-                  <Button onClick={handleSavePreferences} disabled={saving}>
-                    {saving ? "Saving..." : "Save Changes"}
-                  </Button>
-                  <Button variant="outline" onClick={handleCancelPreferences}>Cancel</Button>
+                <div className="text-center py-12 text-gray-500">
+                  <p>No appointment history yet.</p>
+                  <p className="text-sm mt-2">Book your first appointment to see it here!</p>
                 </div>
               )}
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Notification Preferences</h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  Manage your in-app notification settings. All notifications will appear on this website.
-                </p>
-                
-                <div className="space-y-4">
-                  {/* Master Toggle */}
-                  <label className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <input
-                      type="checkbox"
-                      checked={preferencesForm.notificationsEnabled ?? true}
-                      onChange={(e) => setPreferencesForm({
-                        ...preferencesForm,
-                        notificationsEnabled: e.target.checked,
-                      })}
-                      disabled={!isEditingPreferences}
-                      className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 mt-0.5"
-                    />
-                    <div>
-                      <span className="font-medium text-gray-900">Enable Notifications</span>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Receive in-app notifications for appointments and promotions
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Show options only if notifications are enabled */}
-                  {preferencesForm.notificationsEnabled && (
-                    <div className="ml-8 space-y-4 pl-4 border-l-2 border-gray-200">
-                      {/* Appointment Reminders */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Appointment Reminders</h4>
-                        <div className="space-y-2">
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={preferencesForm.appointmentReminders?.dayBefore ?? true}
-                              onChange={(e) => setPreferencesForm({
-                                ...preferencesForm,
-                                appointmentReminders: {
-                                  ...preferencesForm.appointmentReminders,
-                                  dayBefore: e.target.checked,
-                                },
-                              })}
-                              disabled={!isEditingPreferences}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            />
-                            <span className="text-gray-700">Remind me 1 day before appointment</span>
-                          </label>
-
-                          <label className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={preferencesForm.appointmentReminders?.hourBefore ?? true}
-                              onChange={(e) => setPreferencesForm({
-                                ...preferencesForm,
-                                appointmentReminders: {
-                                  ...preferencesForm.appointmentReminders,
-                                  hourBefore: e.target.checked,
-                                },
-                              })}
-                              disabled={!isEditingPreferences}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                            />
-                            <span className="text-gray-700">Remind me 1 hour before appointment</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Promotional Notifications */}
-                      <div>
-                        <h4 className="font-medium text-gray-900 mb-3">Promotions & Offers</h4>
-                        <label className="flex items-start space-x-3">
-                          <input
-                            type="checkbox"
-                            checked={preferencesForm.promotionalNotifications ?? false}
-                            onChange={(e) => setPreferencesForm({
-                              ...preferencesForm,
-                              promotionalNotifications: e.target.checked,
-                            })}
-                            disabled={!isEditingPreferences}
-                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 mt-0.5"
-                          />
-                          <div>
-                            <span className="text-gray-700">Receive deals from salons</span>
-                            <p className="text-xs text-gray-500 mt-1">
-                              Get notified about discounts and special offers. Each offer is valid only at the salon that sent it.
-                            </p>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </Card>
-        </TabsContent>
-
-        {/* Visit History Tab */}
-        <TabsContent value="history" className="space-y-6">
-          <Card className="p-6">
-            <h2 className="text-2xl font-semibold mb-6">Appointment History</h2>
-
-            {appointments.history && appointments.history.length > 0 ? (
-              <div className="space-y-4">
-                {appointments.history.map((appt) => (
-                  <div
-                    key={appt.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg">{appt.salon?.name}</h3>
-                          <Badge variant={appt.status === "completed" ? "success" : "default"}>
-                            {appt.status}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-600 text-sm mb-1">{appt.salon?.address}</p>
-                        <p className="text-gray-700 mb-1">
-                          <span className="font-medium">Service:</span> {appt.service?.name}
-                        </p>
-                        <p className="text-gray-700 mb-1">
-                          <span className="font-medium">Provider:</span> {appt.employee?.name}
-                        </p>
-                        <p className="text-gray-700">
-                          <span className="font-medium">Date:</span>{" "}
-                          {new Date(appt.whenISO).toLocaleDateString()} at{" "}
-                          {new Date(appt.whenISO).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                        {appt.cancellationReason && (
-                          <p className="text-red-600 text-sm mt-2">
-                            <span className="font-medium">Cancellation reason:</span> {appt.cancellationReason}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold">${appt.service?.price}</p>
-                        <p className="text-sm text-gray-500">{appt.paymentStatus}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <p>No appointment history yet.</p>
-                <p className="text-sm mt-2">Book your first appointment to see it here!</p>
-              </div>
-            )}
-          </Card>
-
-          {appointments.active && appointments.active.length > 0 && (
-            <Card className="p-6">
-              <h2 className="text-2xl font-semibold mb-6">Upcoming Appointments</h2>
-              <div className="space-y-4">
-                {appointments.active.map((appt) => (
-                  <div
-                    key={appt.id}
-                    className="p-4 border border-blue-200 bg-blue-50 rounded-lg"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-semibold text-lg">{appt.salon?.name}</h3>
-                          <Badge variant="default">{appt.status}</Badge>
-                        </div>
-                        <p className="text-gray-600 text-sm mb-1">{appt.salon?.address}</p>
-                        <p className="text-gray-700 mb-1">
-                          <span className="font-medium">Service:</span> {appt.service?.name}
-                        </p>
-                        <p className="text-gray-700 mb-1">
-                          <span className="font-medium">Provider:</span> {appt.employee?.name}
-                        </p>
-                        <p className="text-gray-700">
-                          <span className="font-medium">Date:</span>{" "}
-                          {new Date(appt.whenISO).toLocaleDateString()} at{" "}
-                          {new Date(appt.whenISO).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xl font-bold">${appt.service?.price}</p>
-                        <p className="text-sm text-gray-500">{appt.paymentStatus}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </Card>
-          )}
-        </TabsContent>
 
-        {/* Loyalty Points Tab */}
-        <TabsContent value="loyalty" className="space-y-6">
-          <Card className="p-6">
-            <h2 className="text-2xl font-semibold mb-6">Loyalty Points Summary</h2>
-
-            {loyaltyData && loyaltyData.length > 0 ? (
-              <div className="space-y-6">
-                {loyaltyData.map((salon) => (
-                  <div key={salon.salon_id} className="border-b pb-6 last:border-b-0">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-xl font-semibold">{salon.salon_name}</h3>
-                      <div className="text-center">
-                        <p className="text-3xl font-bold text-blue-600">{salon.balance}</p>
-                        <p className="text-sm text-gray-500">Points Available</p>
-                      </div>
-                    </div>
-
-                    {salon.activity && salon.activity.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-3">Recent Activity</h4>
-                        <div className="space-y-2">
-                          {salon.activity.slice(0, 5).map((activity) => (
-                            <div
-                              key={activity.id}
-                              className="flex justify-between items-center p-3 bg-gray-50 rounded"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">{activity.description}</p>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(activity.date).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <div
-                                className={`font-semibold ${
-                                  activity.type === "earned" ? "text-green-600" : "text-red-600"
-                                }`}
-                              >
-                                {activity.type === "earned" ? "+" : "-"}
-                                {activity.points}
-                              </div>
-                            </div>
-                          ))}
+            {appointments.upcoming && appointments.upcoming.length > 0 && (
+              <Card className="p-6">
+                <h2 className="text-2xl font-semibold mb-6">Upcoming Appointments</h2>
+                <div className="space-y-4">
+                  {appointments.upcoming.map((appt) => (
+                    <div
+                      key={appt.id}
+                      className="p-4 border border-blue-200 bg-blue-50 rounded-lg"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-semibold text-lg">{appt.salon?.name}</h3>
+                            <Badge variant="default">{appt.status}</Badge>
+                          </div>
+                          <p className="text-gray-600 text-sm mb-1">{appt.salon?.address}</p>
+                          <p className="text-gray-700 mb-1">
+                            <span className="font-medium">Service:</span> {appt.service?.name}
+                          </p>
+                          <p className="text-gray-700 mb-1">
+                            <span className="font-medium">Provider:</span> {appt.employee?.name}
+                          </p>
+                          <p className="text-gray-700">
+                            <span className="font-medium">Date:</span>{" "}
+                            {appt.whenISO ? new Date(appt.whenISO).toLocaleDateString() : "N/A"} at{" "}
+                            {appt.whenISO ? new Date(appt.whenISO).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "N/A"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold">${appt.service?.price || "N/A"}</p>
+                          <p className="text-sm text-gray-500">{appt.payment_status || "N/A"}</p>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <p>No loyalty points yet.</p>
-                <p className="text-sm mt-2">Complete appointments to start earning points!</p>
-              </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
             )}
-          </Card>
-        </TabsContent>
+          </TabsContent>
+        )}
+
+        {/* Loyalty Points Tab - Customer Only */}
+        {isCustomer && (
+          <TabsContent value="loyalty" className="space-y-6">
+            <Card className="p-6">
+              <h2 className="text-2xl font-semibold mb-6">Loyalty Points Summary</h2>
+
+              {loyaltyData && loyaltyData.length > 0 ? (
+                <div className="space-y-6">
+                  {loyaltyData.map((salon) => (
+                    <div key={salon.salon_id} className="border-b pb-6 last:border-b-0">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-semibold">{salon.salon_name}</h3>
+                        <div className="text-center">
+                          <p className="text-3xl font-bold text-blue-600">{salon.balance}</p>
+                          <p className="text-sm text-gray-500">Points Available</p>
+                        </div>
+                      </div>
+
+                      {salon.activity && salon.activity.length > 0 && (
+                        <div>
+                          <h4 className="font-medium mb-3">Recent Activity</h4>
+                          <div className="space-y-2">
+                            {salon.activity.slice(0, 5).map((activity) => (
+                              <div
+                                key={activity.id}
+                                className="flex justify-between items-center p-3 bg-gray-50 rounded"
+                              >
+                                <div>
+                                  <p className="text-sm font-medium">{activity.description}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {new Date(activity.date).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <div
+                                  className={`font-semibold ${
+                                    activity.type === "earned" ? "text-green-600" : "text-red-600"
+                                  }`}
+                                >
+                                  {activity.type === "earned" ? "+" : "-"}
+                                  {activity.points}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p>No loyalty points yet.</p>
+                  <p className="text-sm mt-2">Complete appointments to start earning points!</p>
+                </div>
+              )}
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
 }
-

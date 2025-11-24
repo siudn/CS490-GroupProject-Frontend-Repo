@@ -58,14 +58,9 @@ export async function listAvailability({ salonId, employeeId, serviceId, dateISO
 }
 
 export async function listUserAppointments() {
-<<<<<<< HEAD
-  if (import.meta.env.VITE_MOCK === "1") return MOCK_APPTS;
-  return api("/api/appointments/"); // expected: { active:[], history:[] }
-=======
   const upcoming = await fetchAppointments({ when: "upcoming" });
   const past = await fetchAppointments({ when: "past" });
   return { upcoming, past };
->>>>>>> dev
 }
 
 export async function createAppointment(payload) {
