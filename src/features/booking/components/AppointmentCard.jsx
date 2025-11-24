@@ -158,6 +158,98 @@ export default function AppointmentCard({
         </div>
       )}
 
+      {/* REVIEW DISPLAY */}
+      {appt.review && (
+        <div className="mt-5 rounded-xl border bg-gray-50 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-900">Your Review</span>
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span
+                  key={star}
+                  className={`text-sm ${
+                    star <= (appt.review.stars || appt.review.rating || 0)
+                      ? "text-amber-500"
+                      : "text-gray-300"
+                  }`}
+                >
+                  ★
+                </span>
+              ))}
+            </div>
+          </div>
+          {appt.review.text || appt.review.comment ? (
+            <p className="text-sm text-gray-700">{appt.review.text || appt.review.comment}</p>
+          ) : null}
+          
+          {/* Review Images */}
+          {appt.review.images && appt.review.images.length > 0 && (
+            <div className="flex flex-col md:flex-row gap-4">
+              {(() => {
+                const beforeImages = appt.review.images.filter(
+                  (img) => img.label === "before" || img.type === "before"
+                );
+                const afterImages = appt.review.images.filter(
+                  (img) => img.label === "after" || img.type === "after"
+                );
+                return (
+                  <>
+                    {beforeImages.length > 0 && (
+                      <div className="flex-1">
+                        <h4 className="text-xs font-medium text-gray-600 mb-2">Before</h4>
+                        <div className="flex gap-2 flex-wrap">
+                          {beforeImages.map((img) => (
+                            <img
+                              key={img.id || img.url || img.signed_url}
+                              src={img.url || img.signed_url}
+                              alt="Before"
+                              className="h-48 w-48 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                              onClick={() => {
+                                const url = img.url || img.signed_url;
+                                if (url) window.open(url, "_blank");
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {afterImages.length > 0 && (
+                      <div className="flex-1">
+                        <h4 className="text-xs font-medium text-gray-600 mb-2">After</h4>
+                        <div className="flex gap-2 flex-wrap">
+                          {afterImages.map((img) => (
+                            <img
+                              key={img.id || img.url || img.signed_url}
+                              src={img.url || img.signed_url}
+                              alt="After"
+                              className="h-48 w-48 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                              onClick={() => {
+                                const url = img.url || img.signed_url;
+                                if (url) window.open(url, "_blank");
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+          
+          {/* Owner Response */}
+          {appt.review.response && (
+            <div className="mt-3 p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+              <div className="text-sm font-medium text-indigo-900 mb-1">Salon Owner Response:</div>
+              <div className="text-sm text-indigo-800">
+                {appt.review.response.response_text || appt.review.response.text}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {children ? <div className="mt-5">{children}</div> : null}
     </div>
   );
