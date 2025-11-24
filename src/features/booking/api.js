@@ -75,6 +75,14 @@ export async function createAppointment(payload) {
   });
 }
 
+export async function updateAppointment(payload) {
+  if (!payload?.id) throw new Error("Appointment update requires an id.");
+  return api("/appointments", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function rescheduleAppointment(id, update) {
   return api(`/appointments/${id}/reschedule`, {
     method: "PATCH",
@@ -89,10 +97,24 @@ export async function cancelAppointment(id, reason) {
   });
 }
 
-export async function submitReview(id, { stars, comment }) {
-  return api(`/appointments/${id}/review`, {
+export async function submitReview(appointmentId, { stars, comment }) {
+  return api(`/reviews/`, {
     method: "POST",
-    body: JSON.stringify({ stars, comment }),
+    body: JSON.stringify({ 
+      appointment_id: appointmentId,
+      rating: stars,
+      comment: comment || "",
+    }),
+  });
+}
+
+export async function updateReview(reviewId, { stars, comment }) {
+  return api(`/reviews/${reviewId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ 
+      rating: stars,
+      comment: comment || "",
+    }),
   });
 }
 

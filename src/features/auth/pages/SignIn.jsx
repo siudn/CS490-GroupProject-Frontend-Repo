@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../auth-provider.jsx";
 import { useNavigate } from "react-router-dom";
 
@@ -15,8 +15,8 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Redirect if already logged in
-  if (user) {
+  useEffect(() => {
+    if (!user) return;
     const roleRedirects = {
       customer: "/browse",
       owner: "/salon-dashboard",
@@ -26,8 +26,7 @@ export default function SignIn() {
     };
     const destination = roleRedirects[user.role] || "/browse";
     navigate(destination, { replace: true });
-    return null;
-  }
+  }, [user, navigate]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -62,7 +61,7 @@ export default function SignIn() {
     try {
       const userData = await login(formData.email, formData.password);
       setSuccessMessage("Login successful! Redirecting...");
-      
+
       // Role-based redirect
       const redirectPaths = {
         customer: "/browse",
@@ -73,8 +72,8 @@ export default function SignIn() {
       };
 
       setTimeout(() => {
-        navigate(redirectPaths[userData.role] || "/browse");
-      }, 1000);
+        navigate(redirectPaths[userData.role] || "/browse", { replace: true });
+      }, 500);
     } catch (error) {
       setErrors({ submit: error.message || "Invalid email or password" });
     } finally {

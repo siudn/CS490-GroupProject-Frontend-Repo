@@ -1,16 +1,30 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 
 export default function AppointmentCard({
   appt,
   onCancel,
   onReschedule,
   compact = false,
+  onSaveNote,
   children,
 }) {
   const start = new Date(appt.start_at || appt.whenISO);
   const salon = appt.salon || {};
   const service = appt.service || {};
   const barber = appt.barber || appt.employee || {};
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(appt.notes || "");
+  const hasNote = Boolean(appt.notes);
+
+  const showNoteEditor =
+    onSaveNote && appt.status !== "cancelled" && (!hasNote || editingNote);
+
+  const saveNote = async () => {
+    if (!onSaveNote) return;
+    await onSaveNote(appt.id, noteDraft);
+    setEditingNote(false);
+  };
   return (
     <div className="rounded-2xl border bg-white p-5">
       <div className="flex items-start justify-between gap-4">
@@ -64,9 +78,49 @@ export default function AppointmentCard({
         </div>
       )}
 
+      {/* NOTES */}
+      {appt.notes && !showNoteEditor && (
+        <div className="mt-3 w-full">
+          <div className="rounded-xl border bg-gray-50 text-gray-700 text-sm px-3 py-2">
+            Note for barber: {appt.notes}
+          </div>
+        </div>
+      )}
+      {showNoteEditor && (
+        <div className="mt-3 w-full space-y-2">
+          <label className="text-sm text-gray-700">Add a note for your barber</label>
+          <textarea
+            value={noteDraft}
+            onChange={(e) => setNoteDraft(e.target.value)}
+            rows={3}
+            className="w-full rounded-xl border px-3 py-2 text-sm"
+            placeholder="Optional note about your appointment..."
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={saveNote}
+              className="rounded-xl bg-gray-900 text-white px-4 py-2 text-sm"
+            >
+              Save Note
+            </button>
+            {hasNote && (
+              <button
+                onClick={() => {
+                  setNoteDraft(appt.notes || "");
+                  setEditingNote(false);
+                }}
+                className="rounded-xl border px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ACTIONS */}
-      {!compact && appt.status !== "cancelled" && (
-        <div className="mt-4 flex gap-3">
+      {!compact && (
+        <div className="mt-4 flex items-center gap-3 justify-between flex-wrap">
           {salon.id && (
             <Link
               to={`/salon/${salon.id}`}
@@ -75,24 +129,35 @@ export default function AppointmentCard({
               View Salon
             </Link>
           )}
-          {onReschedule && (
-            <button
-              onClick={() => onReschedule(appt)}
-              className="rounded-xl border px-3 py-2 hover:bg-gray-50"
-            >
-              Reschedule
-            </button>
-          )}
-          {onCancel && (
-            <button
-              onClick={() => onCancel(appt)}
-              className="rounded-xl border px-3 py-2 text-white bg-rose-600 hover:bg-rose-700"
-            >
-              Cancel
-            </button>
-          )}
+          <div className="flex gap-2">
+            {onReschedule && appt.status !== "cancelled" && (
+              <button
+                onClick={() => onReschedule(appt)}
+                className="rounded-xl border px-3 py-2 hover:bg-gray-50"
+              >
+                Reschedule
+              </button>
+            )}
+            {onCancel && appt.status !== "cancelled" && (
+              <button
+                onClick={() => onCancel(appt)}
+                className="rounded-xl border px-3 py-2 text-white bg-rose-600 hover:bg-rose-700"
+              >
+                Cancel
+              </button>
+            )}
+            {onSaveNote && !showNoteEditor && appt.status !== "cancelled" && (
+              <button
+                onClick={() => setEditingNote(true)}
+                className="rounded-xl border px-3 py-2 hover:bg-gray-50 text-sm"
+              >
+                {hasNote ? "Edit note" : "Add note"}
+              </button>
+            )}
+          </div>
         </div>
       )}
+
       {children ? <div className="mt-5">{children}</div> : null}
     </div>
   );
