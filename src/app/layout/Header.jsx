@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../features/auth/auth-provider.jsx";
 import { api } from "../../shared/api/client.js";
 import { checkSetupStatus } from "../../features/salon-reg/api.js";
+import NotificationDrawer from "../../features/notifications/components/NotificationDrawer.jsx";
 import salonicaLogo from "../../assets/salonica.png";
 
 const linkClass = ({ isActive }) =>
@@ -159,6 +160,7 @@ export default function Header() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
+              <NotificationDrawer />
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">
                   Welcome, {displayName}
