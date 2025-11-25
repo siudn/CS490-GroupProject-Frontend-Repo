@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../../shared/api/client.js";
 import { checkSetupStatus, getSalonServices, getSalonEmployees, updateSalon, createService, updateService, deleteService, addBarberToSalon, removeEmployee, searchBarbers, addServiceToBarber, getBarberServices, respondToReview } from "../../salon-reg/api.js";
-import { getSalon, getSalonReviews } from "../../booking/api.js";
+import { getSalon, getSalonReviews, getFullReview, refreshSignedUrl } from "../../booking/api.js";
 import { AlertCircle, CheckCircle2, ArrowRight, Edit2, X, Plus, Save, Trash2, Loader2, MessageSquare, Search } from "lucide-react";
 import { Button } from "../../../shared/ui/button";
 import { Input } from "../../../shared/ui/input";
@@ -159,11 +159,45 @@ export default function OwnerDashboard() {
         setBarberServices(barberServicesMap);
       }
       
-      // Load reviews
+      // Load reviews with full data including images
       const reviewsRes = await getSalonReviews(id);
       // getSalonReviews already returns the array, but handle both formats
       const reviewsList = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes?.reviews || []);
-      setReviews(reviewsList);
+      
+      // Fetch full review data including images and responses
+      const reviewsWithDetails = await Promise.all(
+        reviewsList.map(async (review) => {
+          try {
+            const fullReview = await getFullReview(review.id);
+            
+            // Refresh signed URLs for images that don't have them
+            if (fullReview.images && fullReview.images.length > 0) {
+              fullReview.images = await Promise.all(
+                fullReview.images.map(async (img) => {
+                  if (img.signed_url) return img;
+                  if (img.file_url) {
+                    try {
+                      const result = await refreshSignedUrl(img.file_url, "review-images");
+                      return { ...img, signed_url: result.signed_url };
+                    } catch (err) {
+                      console.error(`Failed to refresh signed URL for ${img.file_url}:`, err);
+                      return img;
+                    }
+                  }
+                  return img;
+                })
+              );
+            }
+            
+            return fullReview;
+          } catch (err) {
+            console.error(`Failed to fetch full review ${review.id}:`, err);
+            return review; // Fallback to basic review data
+          }
+        })
+      );
+      
+      setReviews(reviewsWithDetails);
     } catch (err) {
       console.error("Error loading full salon data:", err);
       // Don't throw - allow component to render with partial data
@@ -521,8 +555,8 @@ export default function OwnerDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="relative">
-            <img src={heroImage} alt={salon.name} className="rounded-xl w-full h-56 object-cover" />
+          <div className="relative flex items-center justify-center bg-gray-50 rounded-xl overflow-hidden min-h-[224px]">
+            <img src={heroImage} alt={salon.name} className="max-w-full max-h-56 w-auto h-auto object-contain rounded-xl" />
             {editingSalon && (
               <div className="mt-2">
                 <Label>Logo</Label>
@@ -998,7 +1032,57 @@ export default function OwnerDashboard() {
                     <span className="text-gray-300">{"★".repeat(5 - review.stars)}</span>
                   </div>
                 </div>
-                <p className="text-gray-700 text-sm mb-2">{review.text || "No written feedback."}</p>
+                <p className="text-gray-700 text-sm mb-2">{review.text || review.comment || "No written feedback."}</p>
+                
+                {/* Review Images */}
+                {review.images && review.images.length > 0 && (() => {
+                  const beforeImages = review.images.filter(img => img.label === "before" || img.type === "before");
+                  const afterImages = review.images.filter(img => img.label === "after" || img.type === "after");
+                  
+                  return (beforeImages.length > 0 || afterImages.length > 0) ? (
+                    <div className="mt-3 flex flex-col md:flex-row gap-1">
+                      {beforeImages.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-medium text-gray-600 mb-2">Before</h4>
+                          <div className="flex gap-1 flex-wrap">
+                            {beforeImages.map((img) => (
+                              <img
+                                key={img.id}
+                                src={img.signed_url || img.url}
+                                alt="Before"
+                                className="h-32 w-32 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                                onClick={() => {
+                                  const url = img.signed_url || img.url;
+                                  if (url) window.open(url, "_blank");
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {afterImages.length > 0 && (
+                        <div>
+                          <h4 className="text-xs font-medium text-gray-600 mb-2">After</h4>
+                          <div className="flex gap-1 flex-wrap">
+                            {afterImages.map((img) => (
+                              <img
+                                key={img.id}
+                                src={img.signed_url || img.url}
+                                alt="After"
+                                className="h-32 w-32 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition"
+                                onClick={() => {
+                                  const url = img.signed_url || img.url;
+                                  if (url) window.open(url, "_blank");
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
+                
                 {review.response && (
                   <div className="mt-2 p-3 bg-gray-50 rounded border-l-4 border-indigo-500">
                     <div className="text-sm font-medium text-gray-900 mb-1">Owner Response:</div>
