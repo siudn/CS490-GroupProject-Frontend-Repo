@@ -37,7 +37,7 @@ export async function getSalon(id) {
 }
 
 export async function getSalonReviews(id) {
-  const res = await api(`/salons/${id}/reviews?limit=6`);
+  const res = await api(`/salons/${id}/reviews?limit=1000`);
   return res.reviews ?? [];
 }
 
