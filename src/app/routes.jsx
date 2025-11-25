@@ -10,6 +10,7 @@ import salonRegRoutes from "../features/salon-reg/routes.jsx";
 import scheduleRoutes from "../features/schedule/routes.jsx";
 import adminRoutes from "../features/admin/routes.jsx";
 import homeRoutes from "../features/home/routes.jsx";
+import notificationsRoutes from "../features/notifications/routes.jsx";
 import NotFound from "./NotFound.jsx";
 
 export default [
@@ -25,5 +26,6 @@ export default [
     ...salonRegRoutes,
     ...scheduleRoutes,
     ...adminRoutes,
+    ...notificationsRoutes,
     { path: "*", element: <NotFound /> },
 ];
