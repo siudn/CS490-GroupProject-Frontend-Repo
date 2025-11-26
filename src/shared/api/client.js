@@ -40,15 +40,33 @@ export async function api(path, opts = {}) {
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+
+  // Prepare body - stringify JSON, leave FormData as-is
+  let body = opts.body;
+  if (!isFormData && body && typeof body === "object") {
+    body = JSON.stringify(body);
+  }
   
   const res = await fetch(import.meta.env.VITE_API + path, {
-    headers,
     ...opts,
+    headers,
+    body,
   });
   
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(errorText);
+    let errorMessage = errorText;
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (errorJson.message) {
+        errorMessage = errorJson.message;
+      } else if (errorJson.error) {
+        errorMessage = errorJson.error;
+      }
+    } catch {
+      // If not JSON, use the text as-is
+    }
+    throw new Error(errorMessage);
   }
   
   return res.json();

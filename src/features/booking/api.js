@@ -37,7 +37,7 @@ export async function getSalon(id) {
 }
 
 export async function getSalonReviews(id) {
-  const res = await api(`/salons/${id}/reviews?limit=6`);
+  const res = await api(`/salons/${id}/reviews?limit=1000`);
   return res.reviews ?? [];
 }
 
@@ -109,6 +109,77 @@ export async function updateReview(reviewId, { stars, comment }) {
     body: JSON.stringify({ 
       rating: stars,
       comment: comment || "",
+    }),
+  });
+}
+
+export async function uploadReviewImages(reviewId, files, labels) {
+  const formData = new FormData();
+  
+  // Validate files
+  if (!files || files.length === 0) {
+    throw new Error("No files provided");
+  }
+  
+  console.log("Preparing FormData with files:", files.length, "files");
+  console.log("Files array:", files);
+  
+  // Add all files - Flask's getlist() will collect them into an array
+  files.forEach((file, index) => {
+    // Validate that it's a File object
+    if (!(file instanceof File)) {
+      console.error(`File ${index + 1} is not a File object:`, file, typeof file);
+      throw new Error(`File ${index + 1} is not a valid File object`);
+    }
+    console.log(`Adding file ${index + 1}:`, {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      isFile: file instanceof File,
+      isBlob: file instanceof Blob
+    });
+    formData.append("files", file, file.name);
+  });
+  
+  // Add corresponding labels
+  if (labels && labels.length > 0) {
+    labels.forEach((label, index) => {
+      console.log(`Adding label ${index + 1}:`, label);
+      formData.append("labels", label);
+    });
+  }
+  
+  // Log FormData contents (for debugging)
+  console.log("FormData entries:");
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      console.log(`  ${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+    } else {
+      console.log(`  ${key}: ${value}`);
+    }
+  }
+  
+  return api(`/reviews/${reviewId}/images`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function getReviewImages(reviewId) {
+  const res = await api(`/reviews/${reviewId}/images`);
+  return Array.isArray(res) ? res : res.images || [];
+}
+
+export async function getFullReview(reviewId) {
+  return api(`/reviews/${reviewId}`);
+}
+
+export async function refreshSignedUrl(filepath, fileType = "review-images") {
+  return api("/uploads/refresh", {
+    method: "POST",
+    body: JSON.stringify({
+      filepath,
+      file_type: fileType
     }),
   });
 }

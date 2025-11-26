@@ -14,6 +14,7 @@ import {
   deleteUnavailability,
   fetchAvailability,
 } from "../api.js";
+import NotificationsPage from "../../notifications/pages/NotificationsPage.jsx";
 
 const SLOT_DURATION_MINUTES = 60;
 const DISPLAY_SLOT_MINUTES = 15;
@@ -1115,9 +1116,7 @@ export default function ProviderDashboard() {
       )}
 
       {activeTab === "notifications" && (
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <p className="text-gray-500">No notifications</p>
-        </div>
+        <NotificationsPage />
       )}
 
       {showBlockDialog && (
