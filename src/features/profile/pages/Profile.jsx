@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/auth-provider.jsx";
-import { getCurrentUserProfile, updateUserProfile, uploadProfileImage } from "../api.js";
+import { getCurrentUserProfile, updateUserProfile, getAvailableServices } from "../api.js";
 import { listUserAppointments } from "../../booking/api.js";
 import { getCustomerPoints } from "../../loyalty/api.js";
 import { Card } from "../../../shared/ui/card.jsx";
@@ -17,11 +18,11 @@ const GENDERS = ["male", "female", "non-binary", "prefer-not-to-say", "other"];
 
 export default function Profile() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
 
@@ -29,11 +30,16 @@ export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [appointments, setAppointments] = useState({ upcoming: [], past: [] });
   const [loyaltyData, setLoyaltyData] = useState([]);
+  const [availableServices, setAvailableServices] = useState([]);
 
   // Form states
   const [profileForm, setProfileForm] = useState({});
 
-  const isCustomer = user?.role === "customer";
+  const userRole = user?.role;
+  const isCustomer = userRole === "customer";
+  const isOwner = userRole === "salon_owner" || userRole === "owner";
+  const isBarber = userRole === "barber";
+  const isAdmin = userRole === "admin";
 
   useEffect(() => {
     loadAllData();
@@ -45,7 +51,8 @@ export default function Profile() {
     try {
       const profileData = await getCurrentUserProfile();
       setProfile(profileData);
-      // Map backend snake_case to form camelCase for display
+      
+      // Initialize form with profile data (snake_case from backend)
       setProfileForm({
         first_name: profileData?.first_name || "",
         last_name: profileData?.last_name || "",
@@ -57,7 +64,17 @@ export default function Profile() {
         state: profileData?.state || "",
         age_bracket: profileData?.age_bracket || null,
         gender: profileData?.gender || null,
+        preferred_services: profileData?.preferred_services || [],
       });
+
+      // Load available services for preferred_services dropdown
+      try {
+        const services = await getAvailableServices();
+        setAvailableServices(services || []);
+      } catch (err) {
+        console.error("Failed to load services:", err);
+        setAvailableServices([]);
+      }
 
       // Load customer-specific data only for customers
       if (isCustomer) {
@@ -66,8 +83,8 @@ export default function Profile() {
             listUserAppointments(),
             getCustomerPoints(),
           ]);
-          setAppointments(appointmentsData);
-          setLoyaltyData(loyaltyDataRes);
+          setAppointments(appointmentsData || { upcoming: [], past: [] });
+          setLoyaltyData(loyaltyDataRes || []);
         } catch (err) {
           console.error("Failed to load customer data:", err);
         }
@@ -76,36 +93,6 @@ export default function Profile() {
       setError("Failed to load profile data: " + (err.message || "Unknown error"));
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleImageUpload(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      setError("Please select an image file");
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Image size must be less than 5MB");
-      return;
-    }
-
-    setUploadingImage(true);
-    setError(null);
-    try {
-      const signedUrl = await uploadProfileImage(file);
-      setProfileForm({ ...profileForm, profile_image_url: signedUrl });
-      setSuccessMessage("Image uploaded successfully!");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError("Failed to upload image: " + (err.message || "Unknown error"));
-    } finally {
-      setUploadingImage(false);
     }
   }
 
@@ -153,6 +140,11 @@ export default function Profile() {
       if (profileForm.state !== undefined) updateData.state = profileForm.state || null;
       if (profileForm.age_bracket !== undefined) updateData.age_bracket = profileForm.age_bracket || null;
       if (profileForm.gender !== undefined) updateData.gender = profileForm.gender || null;
+      if (profileForm.preferred_services !== undefined) {
+        updateData.preferred_services = Array.isArray(profileForm.preferred_services) 
+          ? profileForm.preferred_services 
+          : [];
+      }
 
       const result = await updateUserProfile(updateData);
       setProfile({ ...profile, ...result });
@@ -161,17 +153,22 @@ export default function Profile() {
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       const errorMessage = err.message || "Unknown error";
+      
       // Try to parse error details if available
-      if (errorMessage.includes("details")) {
-        try {
-          const errorObj = JSON.parse(errorMessage);
-          if (errorObj.details && Array.isArray(errorObj.details)) {
-            const detailMessages = errorObj.details.map(d => d.msg || d.message).join(", ");
-            setError(`Validation failed: ${detailMessages}`);
-          } else {
-            setError(errorObj.error || errorMessage);
-          }
-        } catch {
+      let parsedError = null;
+      try {
+        parsedError = JSON.parse(errorMessage);
+      } catch {
+        // Not JSON, use as-is
+      }
+
+      if (parsedError) {
+        if (parsedError.details && Array.isArray(parsedError.details)) {
+          const detailMessages = parsedError.details.map(d => d.msg || d.message || JSON.stringify(d)).join(", ");
+          setError(`Validation failed: ${detailMessages}`);
+        } else if (parsedError.error) {
+          setError(parsedError.error);
+        } else {
           setError(errorMessage);
         }
       } else {
@@ -195,11 +192,19 @@ export default function Profile() {
       state: profile?.state || "",
       age_bracket: profile?.age_bracket || null,
       gender: profile?.gender || null,
+      preferred_services: profile?.preferred_services || [],
     });
     setIsEditingProfile(false);
     setError(null);
   }
 
+  function togglePreferredService(serviceName) {
+    const current = profileForm.preferred_services || [];
+    const updated = current.includes(serviceName)
+      ? current.filter(s => s !== serviceName)
+      : [...current, serviceName];
+    setProfileForm({ ...profileForm, preferred_services: updated });
+  }
 
   if (loading) {
     return (
@@ -214,6 +219,7 @@ export default function Profile() {
     );
   }
 
+  // Determine tabs based on role
   const tabs = ["profile"];
   if (isCustomer) {
     tabs.push("history", "loyalty");
@@ -258,7 +264,7 @@ export default function Profile() {
                 <Button onClick={() => setIsEditingProfile(true)}>Edit Profile</Button>
               ) : (
                 <div className="space-x-2">
-                  <Button onClick={handleSaveProfile} disabled={saving || uploadingImage}>
+                  <Button onClick={handleSaveProfile} disabled={saving}>
                     {saving ? "Saving..." : "Save Changes"}
                   </Button>
                   <Button variant="outline" onClick={handleCancelProfile}>Cancel</Button>
@@ -268,7 +274,7 @@ export default function Profile() {
 
             {/* Profile Image */}
             <div className="mb-6">
-              <Label>Profile Image</Label>
+              <Label>Profile Image URL</Label>
               <div className="flex items-center gap-4 mt-2">
                 <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                   {profileForm.profile_image_url ? (
@@ -282,26 +288,16 @@ export default function Profile() {
                   )}
                 </div>
                 {isEditingProfile && (
-                  <div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={uploadingImage}
-                      className="hidden"
-                      id="profile-image-upload"
+                  <div className="flex-1">
+                    <Input
+                      id="profile_image_url"
+                      type="url"
+                      value={profileForm.profile_image_url || ""}
+                      onChange={(e) => setProfileForm({ ...profileForm, profile_image_url: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                      className="max-w-md"
                     />
-                    <Label htmlFor="profile-image-upload">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        as="span"
-                        disabled={uploadingImage}
-                        className="cursor-pointer"
-                      >
-                        {uploadingImage ? "Uploading..." : "Upload Image"}
-                      </Button>
-                    </Label>
+                    <p className="text-xs text-gray-500 mt-1">Enter a URL to your profile image</p>
                   </div>
                 )}
               </div>
@@ -430,6 +426,64 @@ export default function Profile() {
                   maxLength={50}
                   placeholder="Enter state"
                 />
+              </div>
+
+              {/* Preferred Services - Multi-select */}
+              {isCustomer && (
+                <div className="md:col-span-2">
+                  <Label htmlFor="preferred_services">Preferred Services</Label>
+                  <div className="mt-2 p-4 border rounded-lg bg-gray-50 min-h-[100px]">
+                    {availableServices.length === 0 ? (
+                      <p className="text-sm text-gray-500">Loading services...</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {availableServices.map((service) => {
+                          const isSelected = (profileForm.preferred_services || []).includes(service);
+                          return (
+                            <button
+                              key={service}
+                              type="button"
+                              onClick={() => isEditingProfile && togglePreferredService(service)}
+                              disabled={!isEditingProfile}
+                              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                                isSelected
+                                  ? "bg-blue-600 text-white"
+                                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-100"
+                              } ${!isEditingProfile ? "cursor-default" : "cursor-pointer"}`}
+                            >
+                              {service}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {isEditingProfile && (
+                      <p className="text-xs text-gray-500 mt-2">Click services to select/deselect your preferences</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Role-specific quick links */}
+            <div className="mt-6 pt-6 border-t">
+              <h3 className="text-lg font-semibold mb-3">Quick Links</h3>
+              <div className="flex flex-wrap gap-2">
+                {isOwner && (
+                  <Button variant="outline" onClick={() => navigate("/owner/dashboard")}>
+                    Salon Dashboard
+                  </Button>
+                )}
+                {isBarber && (
+                  <Button variant="outline" onClick={() => navigate("/schedule")}>
+                    My Schedule
+                  </Button>
+                )}
+                {isAdmin && (
+                  <Button variant="outline" onClick={() => navigate("/admin/dashboard")}>
+                    Admin Dashboard
+                  </Button>
+                )}
               </div>
             </div>
           </Card>

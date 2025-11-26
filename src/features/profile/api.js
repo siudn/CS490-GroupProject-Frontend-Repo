@@ -11,7 +11,7 @@ export async function getCurrentUserProfile() {
 
 /**
  * Update the current user's profile
- * @param {Object} profileData - Profile data to update (all fields optional)
+ * @param {Object} profileData - Profile data to update (all fields optional, snake_case)
  * @returns {Promise<Object>} Updated profile object
  */
 export async function updateUserProfile(profileData) {
@@ -20,25 +20,6 @@ export async function updateUserProfile(profileData) {
     body: JSON.stringify(profileData),
   });
   return res.profile ?? profileData;
-}
-
-/**
- * Upload a profile image file
- * @param {File} file - Image file to upload
- * @returns {Promise<string>} Signed URL to use as profile_image_url
- */
-export async function uploadProfileImage(file) {
-  const formData = new FormData();
-  formData.append("file", file);
-  
-  const res = await api("/users/me/images", {
-    method: "POST",
-    body: formData,
-  });
-  
-  // Handle different possible response structures
-  // Backend may return { signed_url: "..." } or { url: "..." } or just the URL string
-  return res.signed_url || res.url || res;
 }
 
 /**
